@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lakeview Firearms — Inventory</title>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #1a1f2e;
+    --surface: #242b3d;
+    --surface2: #2e3750;
+    --border: #3d4d6b;
+    --accent: #f0b429;
+    --accent2: #ffd166;
+    --red: #ff5c5c;
+    --green: #3ddc84;
+    --blue: #4da6ff;
+    --text: #f0f4ff;
+    --muted: #8899bb;
+    --font-display: 'Bebas Neue', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+    --font-body: 'IBM Plex Sans', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font-body); min-height: 100vh; font-size: 14px; }
+
+  /* HEADER */
+  header {
+    background: var(--surface);
+    border-bottom: 2px solid var(--accent);
+    padding: 0 20px; display: flex; align-items: center;
+    justify-content: space-between; height: 58px; position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.4);
+  }
+  .logo { font-family: var(--font-display); font-size: 22px; letter-spacing: 3px; color: var(--accent); }
+  .logo span { color: var(--text); }
+  .header-right { display: flex; align-items: center; gap: 10px; }
+
+  /* SYNC PILL */
+  .sync-pill {
+    display: flex; align-items: center; gap: 6px;
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: 1px;
+    padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border);
+    color: var(--muted); background: var(--surface2); cursor: pointer;
+    transition: all 0.2s; white-space: nowrap;
+  }
+  .sync-pill:hover { border-color: var(--accent); color: var(--accent); }
+  .sync-pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+  .sync-pill.connected { border-color: var(--green); color: var(--green); }
+  .sync-pill.connected .dot { background: var(--green); }
+  .sync-pill.syncing .dot { background: var(--accent); animation: pulse 1s infinite; }
+  .sync-pill.error { border-color: var(--red); color: var(--red); }
+  .sync-pill.error .dot { background: var(--red); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+  nav { display: flex; gap: 4px; }
+  nav button {
+    background: none; border: 1px solid transparent; color: var(--muted);
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 1px;
+    padding: 7px 14px; cursor: pointer; border-radius: 4px; transition: all 0.15s; text-transform: uppercase;
+  }
+  nav button:hover { background: var(--surface2); border-color: var(--border); color: var(--text); }
+  nav button.active { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 600; }
+
+  /* VIEWS */
+  .view { display: none; padding: 20px; max-width: 1100px; margin: 0 auto; }
+  .view.active { display: block; }
+
+  /* SETUP BANNER */
+  .setup-banner {
+    background: linear-gradient(135deg, rgba(240,180,41,0.12), rgba(240,180,41,0.05));
+    border: 1px solid rgba(240,180,41,0.5); border-radius: 8px;
+    padding: 16px 20px; margin-bottom: 20px;
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  }
+  .setup-banner .icon { font-size: 26px; flex-shrink: 0; }
+  .setup-banner .text { flex: 1; min-width: 200px; }
+  .setup-banner .text strong { display: block; font-size: 14px; color: var(--accent); margin-bottom: 3px; }
+  .setup-banner .text small { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+
+  /* STATS */
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 18px 16px; border-radius: 8px;
+    transition: border-color 0.2s;
+  }
+  .stat-card:hover { border-color: var(--accent); }
+  .stat-card .label { font-family: var(--font-mono); font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
+  .stat-card .value { font-family: var(--font-display); font-size: 36px; color: var(--accent); line-height: 1; }
+  .stat-card .value.red { color: var(--red); }
+  .stat-card .value.green { color: var(--green); }
+
+  /* TOOLBAR & BUTTONS */
+  .toolbar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+  .search-box {
+    background: var(--surface); border: 1px solid var(--border); color: var(--text);
+    font-family: var(--font-mono); font-size: 13px; padding: 9px 14px;
+    border-radius: 6px; flex: 1; min-width: 180px; outline: none; transition: border-color 0.15s;
+  }
+  .search-box::placeholder { color: var(--muted); }
+  .search-box:focus { border-color: var(--accent); background: var(--surface2); }
+
+  .btn {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 1px;
+    padding: 9px 16px; cursor: pointer; border-radius: 6px; text-transform: uppercase;
+    transition: all 0.15s; white-space: nowrap; font-weight: 500;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(240,180,41,0.08); }
+  .btn.primary { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
+  .btn.primary:hover { background: var(--accent2); border-color: var(--accent2); }
+  .btn.danger { color: var(--red); border-color: var(--red); background: none; }
+  .btn.danger:hover { background: rgba(255,92,92,0.12); }
+  .btn.drive { background: rgba(77,166,255,0.1); border-color: var(--blue); color: var(--blue); }
+  .btn.drive:hover { background: rgba(77,166,255,0.2); }
+
+  /* TABLE */
+  table { width: 100%; border-collapse: collapse; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
+  thead tr { background: var(--surface2); }
+  th {
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--muted); padding: 13px 16px; text-align: left; border-bottom: 2px solid var(--border);
+    cursor: pointer; user-select: none; white-space: nowrap;
+  }
+  th:hover { color: var(--accent); }
+  td { padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: middle; background: var(--surface); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+  .barcode-cell { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+  .qty-badge { display: inline-block; font-family: var(--font-mono); font-size: 13px; font-weight: 700; padding: 3px 10px; border-radius: 4px; min-width: 40px; text-align: center; }
+  .qty-ok { background: rgba(61,220,132,0.18); color: var(--green); border: 1px solid rgba(61,220,132,0.3); }
+  .qty-low { background: rgba(255,92,92,0.18); color: var(--red); border: 1px solid rgba(255,92,92,0.3); }
+  .qty-warn { background: rgba(240,180,41,0.18); color: var(--accent); border: 1px solid rgba(240,180,41,0.3); }
+  .action-btns { display: flex; gap: 6px; }
+  .icon-btn {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+    cursor: pointer; border-radius: 5px; width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center; font-size: 14px; transition: all 0.15s;
+  }
+  .icon-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(240,180,41,0.1); }
+  .icon-btn.del:hover { border-color: var(--red); color: var(--red); background: rgba(255,92,92,0.1); }
+
+  /* MODAL */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 200; align-items: center; justify-content: center; padding: 20px; }
+  .modal-overlay.open { display: flex !important; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 28px; width: 100%; max-width: 480px; position: relative; max-height: 90vh; overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  }
+  .modal h2 { font-family: var(--font-display); font-size: 24px; letter-spacing: 2px; color: var(--accent); margin-bottom: 20px; }
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; font-family: var(--font-mono); font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 6px; }
+  .form-group input, .form-group select, .form-group textarea {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); font-family: var(--font-body); font-size: 14px;
+    padding: 10px 13px; border-radius: 6px; outline: none; transition: border-color 0.15s;
+  }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent); background: var(--bg); }
+  .form-group select option { background: var(--surface2); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+  .close-btn { position: absolute; top: 16px; right: 18px; background: none; border: none; color: var(--muted); font-size: 22px; cursor: pointer; line-height: 1; transition: color 0.15s; }
+  .close-btn:hover { color: var(--text); }
+
+  /* SCAN VIEW */
+  .scan-wrapper { max-width: 500px; margin: 0 auto; }
+  .scan-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 16px; }
+  .scan-card h3 { font-family: var(--font-display); font-size: 20px; letter-spacing: 2px; color: var(--accent); margin-bottom: 14px; }
+
+  #qr-reader { width: 100%; border-radius: 8px; overflow: hidden; border: 2px solid var(--border); background: #000; }
+  /* Override html5-qrcode default styles */
+  #qr-reader__scan_region { background: #000 !important; }
+  #qr-reader__dashboard { background: var(--surface2) !important; border-top: 1px solid var(--border) !important; padding: 10px !important; }
+  #qr-reader__dashboard_section_csr button,
+  #qr-reader__dashboard_section_fsr button {
+    background: var(--accent) !important; color: #000 !important; border: none !important;
+    font-family: var(--font-mono) !important; font-size: 11px !important; letter-spacing: 1px !important;
+    font-weight: 700 !important; padding: 8px 16px !important; border-radius: 5px !important; cursor: pointer !important;
+    text-transform: uppercase !important;
+  }
+  #qr-reader__dashboard_section_swaplink { color: var(--blue) !important; font-family: var(--font-mono) !important; font-size: 11px !important; }
+  #qr-reader__status_span { color: var(--muted) !important; font-family: var(--font-mono) !important; font-size: 11px !important; }
+  #qr-reader select { background: var(--surface) !important; color: var(--text) !important; border: 1px solid var(--border) !important; border-radius: 4px !important; padding: 4px 8px !important; font-family: var(--font-mono) !important; font-size: 11px !important; }
+  #qr-reader img { display: none !important; }
+
+  .divider { display: flex; align-items: center; gap: 10px; margin: 14px 0; }
+  .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .divider span { font-family: var(--font-mono); font-size: 10px; color: var(--muted); letter-spacing: 2px; white-space: nowrap; }
+
+  .manual-input-row { display: flex; gap: 8px; }
+  .manual-input-row input {
+    flex: 1; background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    font-family: var(--font-mono); font-size: 14px; padding: 10px 13px; border-radius: 6px; outline: none;
+    transition: border-color 0.15s;
+  }
+  .manual-input-row input:focus { border-color: var(--accent); background: var(--bg); }
+  #notFoundMsg {
+    background: rgba(255,92,92,0.12); border: 1px solid rgba(255,92,92,0.5);
+    color: var(--red); font-family: var(--font-mono); font-size: 12px;
+    padding: 10px 14px; border-radius: 6px; margin-top: 10px; display: none;
+  }
+
+  /* SCAN RESULT */
+  .scan-result { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 18px; margin-top: 12px; }
+  .scan-result .item-name { font-size: 18px; font-weight: 700; margin-bottom: 4px; color: var(--text); }
+  .scan-result .item-meta { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-bottom: 16px; line-height: 1.6; }
+  .txn-type-row { display: flex; gap: 8px; margin-bottom: 14px; }
+  .txn-btn {
+    flex: 1; padding: 10px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--muted); font-family: var(--font-mono);
+    font-size: 12px; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: all 0.15s; font-weight: 600;
+  }
+  .txn-btn.active-in { background: rgba(61,220,132,0.15); border-color: var(--green); color: var(--green); }
+  .txn-btn.active-out { background: rgba(255,92,92,0.15); border-color: var(--red); color: var(--red); }
+  .adj-row { display: flex; align-items: center; gap: 12px; }
+  .adj-row .qty-display { font-family: var(--font-display); font-size: 44px; color: var(--accent); min-width: 64px; text-align: center; line-height: 1; }
+  .adj-row .adj-btn {
+    background: var(--surface); border: 2px solid var(--border); color: var(--text);
+    font-size: 22px; width: 44px; height: 44px; border-radius: 6px; cursor: pointer;
+    transition: all 0.15s; display: flex; align-items: center; justify-content: center; font-weight: 700;
+  }
+  .adj-row .adj-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(240,180,41,0.1); }
+
+  /* LOG VIEW */
+  .log-entry {
+    display: flex; align-items: center; gap: 14px;
+    padding: 13px 16px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; margin-bottom: 8px; transition: border-color 0.15s;
+  }
+  .log-entry:hover { border-color: var(--border); background: var(--surface2); }
+  .log-dir { font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: 1px; min-width: 32px; text-align: center; }
+  .log-dir.in { color: var(--green); }
+  .log-dir.out { color: var(--red); }
+  .log-dir.adj { color: var(--accent); }
+  .log-info { flex: 1; }
+  .log-name { font-size: 14px; font-weight: 600; color: var(--text); }
+  .log-meta { font-family: var(--font-mono); font-size: 10px; color: var(--muted); margin-top: 3px; }
+  .log-qty { font-family: var(--font-display); font-size: 24px; min-width: 44px; text-align: right; }
+
+  /* DRIVE MODAL */
+  .code-block { background: var(--bg); border: 1px solid var(--border); border-radius: 5px; padding: 10px 14px; font-family: var(--font-mono); font-size: 12px; color: var(--accent); word-break: break-all; margin: 8px 0; user-select: all; cursor: text; }
+  .step-num { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: #000; font-family: var(--font-mono); font-size: 11px; font-weight: 700; flex-shrink: 0; margin-right: 10px; }
+  .step-row { display: flex; align-items: flex-start; margin-bottom: 14px; line-height: 1.6; }
+  .step-row p { font-size: 13px; color: var(--text); }
+  .step-row small { font-family: var(--font-mono); font-size: 11px; color: var(--muted); display: block; margin-top: 3px; }
+
+  /* TOAST */
+  #toast {
+    position: fixed; bottom: 24px; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.5px;
+    padding: 11px 22px; border-radius: 8px; z-index: 999;
+    transition: transform 0.25s ease; white-space: nowrap;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+  #toast.success { border-color: var(--green); color: var(--green); background: rgba(61,220,132,0.1); }
+  #toast.error { border-color: var(--red); color: var(--red); background: rgba(255,92,92,0.1); }
+
+  .empty { text-align: center; padding: 60px 20px; color: var(--muted); font-family: var(--font-mono); font-size: 12px; letter-spacing: 1px; }
+  .empty .icon { font-size: 44px; margin-bottom: 14px; opacity: 0.5; }
+
+  @media (max-width: 640px) {
+    header { padding: 0 10px; }
+    .logo { font-size: 16px; }
+    .view { padding: 12px; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    td, th { padding: 10px 10px; }
+    .hide-mobile { display: none !important; }
+    nav button { font-size: 10px; padding: 6px 8px; }
+    .sync-pill span { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">LAKEVIEW <span>FIREARMS</span></div>
+  <nav>
+    <button class="active" onclick="switchView('dashboard', this)">Dashboard</button>
+    <button onclick="switchView('scan', this)">📷 Scan</button>
+    <button onclick="switchView('log', this)">Log</button>
+  </nav>
+  <div class="header-right">
+    <div class="sync-pill" id="syncPill" onclick="openDriveModal()" title="Google Drive Sync">
+      <div class="dot"></div>
+      <span id="syncLabel">Drive</span>
+    </div>
+  </div>
+</header>
+
+<!-- DASHBOARD -->
+<div id="dashView" class="view active">
+  <div id="setupBanner" class="setup-banner" style="display:none">
+    <div class="icon">☁️</div>
+    <div class="text">
+      <strong>Connect Google Drive to sync across devices</strong>
+      <small>Data currently saves only on this device. Click Drive in the top-right to set up sync.</small>
+    </div>
+    <button class="btn drive" onclick="openDriveModal()">Set Up Sync</button>
+  </div>
+  <div class="stats-row" id="statsRow"></div>
+  <div class="toolbar">
+    <input class="search-box" id="searchBox" placeholder="🔍  Search name, barcode, category…" oninput="renderTable()">
+    <button class="btn" onclick="exportCSV()">⬇ CSV</button>
+    <button class="btn" onclick="document.getElementById('pdfFileInput').click()">📄 Import PDF</button>
+    <input type="file" id="pdfFileInput" accept=".pdf" style="display:none" onchange="handlePdfUpload(event)">
+    <button class="btn drive" onclick="manualSync()" id="syncNowBtn" style="display:none">↻ Sync</button>
+    <button class="btn primary" onclick="openAddModal()">+ Add Item</button>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th onclick="sortBy('name')">Item ↕</th>
+        <th onclick="sortBy('category')" class="hide-mobile">Category ↕</th>
+        <th onclick="sortBy('barcode')" class="hide-mobile">Barcode ↕</th>
+        <th onclick="sortBy('qty')">Qty ↕</th>
+        <th onclick="sortBy('cost')" class="hide-mobile">Cost ↕</th>
+        <th onclick="sortBy('price')" class="hide-mobile">Price ↕</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+</div>
+
+<!-- SCAN VIEW -->
+<div id="scanView" class="view">
+  <div class="scan-wrapper">
+    <div class="scan-card">
+      <h3>📷 SCAN BARCODE</h3>
+      <div id="qr-reader"></div>
+      <div class="divider"><span>OR ENTER MANUALLY</span></div>
+      <div class="manual-input-row">
+        <input id="manualBarcode" placeholder="Type or paste barcode…" onkeydown="if(event.key==='Enter')lookupBarcode(this.value)">
+        <button class="btn primary" onclick="lookupBarcode(document.getElementById('manualBarcode').value)">Look Up</button>
+      </div>
+      <div id="notFoundMsg">⚠ Barcode not found in inventory. Add this item in the Dashboard first.</div>
+    </div>
+
+    <div class="scan-card" id="scanResultCard" style="display:none">
+      <h3>ADJUST STOCK</h3>
+      <div class="scan-result">
+        <div class="item-name" id="srName"></div>
+        <div class="item-meta" id="srMeta"></div>
+        <div class="txn-type-row">
+          <button class="txn-btn active-in" id="txnIn" onclick="setTxnType('in')">▲ Stock In</button>
+          <button class="txn-btn" id="txnOut" onclick="setTxnType('out')">▼ Stock Out</button>
+        </div>
+        <div class="adj-row">
+          <button class="adj-btn" onclick="changeAdj(-1)">−</button>
+          <div class="qty-display" id="adjQty">1</div>
+          <button class="adj-btn" onclick="changeAdj(1)">+</button>
+          <div style="flex:1"></div>
+          <button class="btn primary" style="font-size:13px;padding:12px 20px" onclick="confirmAdj()">✓ Confirm</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LOG VIEW -->
+<div id="logView" class="view">
+  <div class="toolbar">
+    <div style="font-family:var(--font-display);font-size:22px;letter-spacing:2px;color:var(--accent);">TRANSACTION LOG</div>
+    <button class="btn danger" onclick="clearLog()">Clear Log</button>
+  </div>
+  <div id="logList"></div>
+</div>
+
+<!-- ADD/EDIT MODAL -->
+<div class="modal-overlay" id="itemModal">
+  <div class="modal">
+    <button class="close-btn" onclick="closeModal()">✕</button>
+    <h2 id="modalTitle">ADD ITEM</h2>
+    <input type="hidden" id="editId">
+    <div class="form-group"><label>Item Name *</label><input id="fName" placeholder="e.g. Magpul MBUS Rear Sight"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Barcode / UPC</label><input id="fBarcode" placeholder="012345678901"></div>
+      <div class="form-group"><label>Category</label><input id="fCategory" placeholder="Sights, Grips, Ammo…" list="catList"><datalist id="catList"></datalist></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Quantity *</label><input id="fQty" type="number" min="0" placeholder="0"></div>
+      <div class="form-group"><label>Low Stock Alert</label><input id="fLow" type="number" min="0" placeholder="2"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Cost ($)</label><input id="fCost" type="number" step="0.01" placeholder="0.00"></div>
+      <div class="form-group"><label>Sell Price ($)</label><input id="fPrice" type="number" step="0.01" placeholder="0.00"></div>
+    </div>
+    <div class="form-group"><label>Notes</label><textarea id="fNotes" rows="2" placeholder="Supplier, location, etc."></textarea></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn primary" onclick="saveItem()">Save Item</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADJ MODAL -->
+<div class="modal-overlay" id="adjModal">
+  <div class="modal" style="max-width:360px">
+    <button class="close-btn" onclick="document.getElementById('adjModal').classList.remove('open')">✕</button>
+    <h2>ADJUST QTY</h2>
+    <div id="adjModalName" style="font-size:15px;margin-bottom:16px;color:var(--muted)"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Direction</label>
+        <select id="adjDir"><option value="in">▲ Stock In</option><option value="out">▼ Stock Out</option><option value="set">= Set Exact</option></select>
+      </div>
+      <div class="form-group"><label>Amount</label><input id="adjAmount" type="number" min="0" value="1"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="document.getElementById('adjModal').classList.remove('open')">Cancel</button>
+      <button class="btn primary" onclick="applyAdjModal()">Apply</button>
+    </div>
+  </div>
+</div>
+
+<!-- DRIVE MODAL -->
+<div class="modal-overlay" id="driveModal">
+  <div class="modal" style="max-width:540px">
+    <button class="close-btn" onclick="document.getElementById('driveModal').classList.remove('open')">✕</button>
+    <h2>GOOGLE DRIVE SYNC</h2>
+    <div id="driveSetupPanel">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.7">
+        Your inventory will be saved as <strong style="color:var(--accent)">lakeview-inventory.json</strong> in your Google Drive — open this app on any device, sign in, and your data stays in sync.
+      </p>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:18px;margin-bottom:18px">
+        <div style="font-family:var(--font-display);font-size:15px;letter-spacing:1px;color:var(--accent);margin-bottom:14px">ONE-TIME SETUP (~5 MIN)</div>
+        <div class="step-row"><span class="step-num">1</span><p>Go to <strong>console.cloud.google.com</strong> → Create a new project</p></div>
+        <div class="step-row"><span class="step-num">2</span><p><strong>APIs &amp; Services → Library</strong> → Search "Google Drive API" → Enable</p></div>
+        <div class="step-row"><span class="step-num">3</span><p><strong>OAuth consent screen</strong> → External → Fill in app name + email → Save</p></div>
+        <div class="step-row"><span class="step-num">4</span><p><strong>Credentials → Create Credentials → OAuth Client ID → Web application</strong></p></div>
+        <div class="step-row"><span class="step-num">5</span><p>Add your app's URL under <strong>Authorized JavaScript origins</strong><br><small>Opening locally? Use http://localhost or host on GitHub Pages for best results.</small></p></div>
+        <div class="step-row"><span class="step-num">6</span><p>Copy your <strong>Client ID</strong> (ends in .apps.googleusercontent.com) and paste below</p></div>
+      </div>
+      <div class="form-group">
+        <label>Google OAuth Client ID</label>
+        <input id="driveClientId" placeholder="xxxxxxxxxxxx.apps.googleusercontent.com" style="font-family:var(--font-mono);font-size:12px">
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="document.getElementById('driveModal').classList.remove('open')">Cancel</button>
+        <button class="btn primary" onclick="saveDriveClientId()">Save &amp; Connect</button>
+      </div>
+    </div>
+    <div id="driveConnectedPanel" style="display:none">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;padding:14px;background:rgba(61,220,132,0.08);border:1px solid rgba(61,220,132,0.3);border-radius:8px">
+        <div style="width:14px;height:14px;border-radius:50%;background:var(--green);flex-shrink:0"></div>
+        <div>
+          <div style="font-size:15px;font-weight:700;color:var(--text)" id="driveUserName">Connected</div>
+          <div style="font-family:var(--font-mono);font-size:11px;color:var(--muted)" id="driveUserEmail"></div>
+        </div>
+      </div>
+      <div style="font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-bottom:18px" id="driveLastSync">Last synced: never</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn drive" onclick="manualSync();document.getElementById('driveModal').classList.remove('open')">↻ Sync Now</button>
+        <button class="btn danger" onclick="disconnectDrive()">Disconnect</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PDF IMPORT MODAL -->
+<div class="modal-overlay" id="pdfModal">
+  <div class="modal" style="max-width:700px;width:100%">
+    <button class="close-btn" onclick="closePdfModal()">&#x2715;</button>
+    <h2>&#x1F4C4; IMPORT FROM PDF</h2>
+    <div id="pdfStep1">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.7">
+        Found <strong id="pdfRowCount" style="color:var(--accent)">0</strong> rows. Match each column to the right field, then click Import.
+      </p>
+      <div id="pdfColumnMappers" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-bottom:16px"></div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;overflow:auto;max-height:240px;margin-bottom:16px">
+        <table style="border:none;border-radius:0;font-size:12px;width:100%" id="pdfPreviewTable">
+          <thead><tr id="pdfPreviewHead"></tr></thead>
+          <tbody id="pdfPreviewBody"></tbody>
+        </table>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <label style="font-family:var(--font-mono);font-size:11px;color:var(--muted);display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" id="pdfSkipFirst" checked> Skip first row (header)
+        </label>
+        <div style="flex:1"></div>
+        <button class="btn" onclick="closePdfModal()">Cancel</button>
+        <button class="btn primary" onclick="importPdfRows()">Import Items</button>
+      </div>
+    </div>
+    <div id="pdfStep2" style="display:none;text-align:center;padding:20px 0">
+      <div style="font-size:48px;margin-bottom:12px">&#x2705;</div>
+      <div style="font-family:var(--font-display);font-size:28px;color:var(--green);letter-spacing:2px;margin-bottom:8px" id="pdfResultMsg">Import Complete</div>
+      <div style="font-family:var(--font-mono);font-size:12px;color:var(--muted);margin-top:6px" id="pdfResultDetail"></div>
+      <div style="margin-top:20px"><button class="btn primary" onclick="closePdfModal()">Done</button></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ─── GOOGLE DRIVE ─────────────────────────────────────────────────────────────
+const DRIVE_SCOPES = 'https://www.googleapis.com/auth/drive.file';
+const DATA_FILENAME = 'lakeview-inventory.json';
+let driveFileId = null, tokenClient = null, gapiInited = false, gisInited = false, syncTimeout = null;
+
+// ─── DATA ─────────────────────────────────────────────────────────────────────
+const DB = {
+  get items() { try { return JSON.parse(localStorage.getItem('lf_items')||'[]'); } catch { return []; } },
+  set items(v) { localStorage.setItem('lf_items', JSON.stringify(v)); scheduleSyncSave(); },
+  get log() { try { return JSON.parse(localStorage.getItem('lf_log')||'[]'); } catch { return []; } },
+  set log(v) { localStorage.setItem('lf_log', JSON.stringify(v)); scheduleSyncSave(); },
+  get clientId() { return localStorage.getItem('lf_drive_client_id')||''; },
+  set clientId(v) { localStorage.setItem('lf_drive_client_id', v); },
+  get lastSync() { return localStorage.getItem('lf_last_sync')||null; },
+  set lastSync(v) { localStorage.setItem('lf_last_sync', v); }
+};
+
+let adjItemId=null, scanItemId=null, adjType='in', adjCount=1, sortCol='name', sortDir=1;
+let html5QrScanner = null;
+
+// ─── VIEWS ────────────────────────────────────────────────────────────────────
+function switchView(v, btn) {
+  document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
+  document.getElementById(v+'View').classList.add('active');
+  if (btn) btn.classList.add('active');
+  if (v==='dashboard') { renderStats(); renderTable(); }
+  if (v==='log') renderLog();
+  if (v==='scan') initScanner();
+  else stopScanner();
+}
+
+// ─── SCANNER (html5-qrcode) ───────────────────────────────────────────────────
+function initScanner() {
+  if (html5QrScanner) return;
+  html5QrScanner = new Html5QrcodeScanner('qr-reader', {
+    fps: 10,
+    qrbox: { width: 260, height: 160 },
+    rememberLastUsedCamera: true,
+    supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
+    formatsToSupport: [
+      Html5QrcodeSupportedFormats.EAN_13,
+      Html5QrcodeSupportedFormats.EAN_8,
+      Html5QrcodeSupportedFormats.UPC_A,
+      Html5QrcodeSupportedFormats.UPC_E,
+      Html5QrcodeSupportedFormats.CODE_128,
+      Html5QrcodeSupportedFormats.CODE_39,
+    ]
+  }, false);
+  html5QrScanner.render(onScanSuccess, onScanError);
+}
+
+function onScanSuccess(code) {
+  document.getElementById('manualBarcode').value = code;
+  lookupBarcode(code);
+}
+function onScanError() { /* silent */ }
+
+function stopScanner() {
+  if (html5QrScanner) {
+    try { html5QrScanner.clear(); } catch {}
+    html5QrScanner = null;
+  }
+}
+
+function lookupBarcode(code) {
+  code = (code||'').trim(); if (!code) return;
+  document.getElementById('notFoundMsg').style.display = 'none';
+  const item = DB.items.find(i => i.barcode === code);
+  if (!item) {
+    document.getElementById('scanResultCard').style.display = 'none';
+    document.getElementById('notFoundMsg').style.display = 'block';
+    toast('Barcode not found: ' + code, 'error'); return;
+  }
+  scanItemId = item.id; adjCount = 1; adjType = 'in';
+  document.getElementById('srName').textContent = item.name;
+  document.getElementById('srMeta').textContent = (item.category||'') + (item.category?' · ':'') + 'Barcode: ' + code + ' · Current qty: ' + item.qty;
+  document.getElementById('adjQty').textContent = 1;
+  document.getElementById('txnIn').className = 'txn-btn active-in';
+  document.getElementById('txnOut').className = 'txn-btn';
+  document.getElementById('scanResultCard').style.display = 'block';
+  toast('Found: ' + item.name, 'success');
+  document.getElementById('scanResultCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function setTxnType(t) {
+  adjType = t;
+  document.getElementById('txnIn').className = 'txn-btn'+(t==='in'?' active-in':'');
+  document.getElementById('txnOut').className = 'txn-btn'+(t==='out'?' active-out':'');
+}
+function changeAdj(d) { adjCount = Math.max(1, adjCount+d); document.getElementById('adjQty').textContent = adjCount; }
+function confirmAdj() {
+  if (!scanItemId) return;
+  const items = DB.items; const idx = items.findIndex(i => i.id===scanItemId); if (idx===-1) return;
+  if (adjType==='in') items[idx].qty += adjCount;
+  else items[idx].qty = Math.max(0, items[idx].qty - adjCount);
+  addLog(items[idx], adjType, adjCount); DB.items = items;
+  document.getElementById('srMeta').textContent = (items[idx].category||'') + (items[idx].category?' · ':'') + 'Barcode: ' + (items[idx].barcode||'') + ' · Current qty: ' + items[idx].qty;
+  toast((adjType==='in'?'+':'-') + adjCount + ' — ' + items[idx].name, 'success');
+  adjCount = 1; document.getElementById('adjQty').textContent = 1;
+}
+
+// ─── STATS ────────────────────────────────────────────────────────────────────
+function renderStats() {
+  const items = DB.items;
+  const low = items.filter(i => i.qty>0 && i.qty<=(i.lowStock||2)).length;
+  const out = items.filter(i => i.qty===0).length;
+  const val = items.reduce((s,i) => s+(i.qty*(i.cost||0)), 0);
+  document.getElementById('statsRow').innerHTML = `
+    <div class="stat-card"><div class="label">Total SKUs</div><div class="value">${items.length}</div></div>
+    <div class="stat-card"><div class="label">Low Stock</div><div class="value ${low?'red':''}">${low}</div></div>
+    <div class="stat-card"><div class="label">Out of Stock</div><div class="value ${out?'red':''}">${out}</div></div>
+    <div class="stat-card"><div class="label">Inventory Value</div><div class="value green">$${val.toFixed(0)}</div></div>`;
+}
+
+// ─── TABLE ────────────────────────────────────────────────────────────────────
+function sortBy(col) { if(sortCol===col) sortDir*=-1; else{sortCol=col;sortDir=1;} renderTable(); }
+function renderTable() {
+  const q = (document.getElementById('searchBox').value||'').toLowerCase();
+  let items = DB.items.filter(i =>
+    i.name.toLowerCase().includes(q) ||
+    (i.barcode||'').toLowerCase().includes(q) ||
+    (i.category||'').toLowerCase().includes(q)
+  );
+  items.sort((a,b) => {
+    let av=a[sortCol]??'', bv=b[sortCol]??'';
+    if(typeof av==='string') av=av.toLowerCase();
+    if(typeof bv==='string') bv=bv.toLowerCase();
+    return av<bv?-sortDir:av>bv?sortDir:0;
+  });
+  const body = document.getElementById('tableBody');
+  if (!items.length) { body.innerHTML='<tr><td colspan="7"><div class="empty"><div class="icon">📦</div>No items found</div></td></tr>'; return; }
+  body.innerHTML = items.map(item => {
+    const low=item.lowStock||2;
+    const qc=item.qty===0?'qty-low':item.qty<=low?'qty-warn':'qty-ok';
+    return `<tr>
+      <td><strong>${esc(item.name)}</strong>${item.notes?`<br><span style="font-size:11px;color:var(--muted)">${esc(item.notes)}</span>`:''}</td>
+      <td class="hide-mobile">${esc(item.category||'—')}</td>
+      <td class="barcode-cell hide-mobile">${esc(item.barcode||'—')}</td>
+      <td><span class="qty-badge ${qc}">${item.qty}</span></td>
+      <td class="hide-mobile">${item.cost?'$'+Number(item.cost).toFixed(2):'—'}</td>
+      <td class="hide-mobile">${item.price?'$'+Number(item.price).toFixed(2):'—'}</td>
+      <td><div class="action-btns">
+        <button class="icon-btn" title="Adjust qty" onclick="openAdjModal('${item.id}')">±</button>
+        <button class="icon-btn" title="Edit" onclick="openEditModal('${item.id}')">✎</button>
+        <button class="icon-btn del" title="Delete" onclick="deleteItem('${item.id}')">✕</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+  updateCatList(); renderStats();
+}
+
+// ─── ADD/EDIT ─────────────────────────────────────────────────────────────────
+function openAddModal() {
+  document.getElementById('modalTitle').textContent='ADD ITEM';
+  document.getElementById('editId').value='';
+  ['fName','fBarcode','fCategory','fNotes'].forEach(id=>document.getElementById(id).value='');
+  ['fQty','fLow','fCost','fPrice'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('itemModal').classList.add('open');
+  setTimeout(()=>document.getElementById('fName').focus(),100);
+}
+function openEditModal(id) {
+  const item=DB.items.find(i=>i.id===id); if(!item) return;
+  document.getElementById('modalTitle').textContent='EDIT ITEM';
+  document.getElementById('editId').value=id;
+  document.getElementById('fName').value=item.name;
+  document.getElementById('fBarcode').value=item.barcode||'';
+  document.getElementById('fCategory').value=item.category||'';
+  document.getElementById('fQty').value=item.qty;
+  document.getElementById('fLow').value=item.lowStock||2;
+  document.getElementById('fCost').value=item.cost||'';
+  document.getElementById('fPrice').value=item.price||'';
+  document.getElementById('fNotes').value=item.notes||'';
+  document.getElementById('itemModal').classList.add('open');
+}
+function saveItem() {
+  const name=document.getElementById('fName').value.trim();
+  const qty=parseInt(document.getElementById('fQty').value)||0;
+  if(!name){toast('Item name required','error');return;}
+  const items=DB.items;
+  const editId=document.getElementById('editId').value;
+  const data={name,barcode:document.getElementById('fBarcode').value.trim(),category:document.getElementById('fCategory').value.trim(),qty,lowStock:parseInt(document.getElementById('fLow').value)||2,cost:parseFloat(document.getElementById('fCost').value)||0,price:parseFloat(document.getElementById('fPrice').value)||0,notes:document.getElementById('fNotes').value.trim()};
+  if(editId){const idx=items.findIndex(i=>i.id===editId);if(idx!==-1){data.id=editId;items[idx]=data;}}
+  else{data.id='item_'+Date.now();items.push(data);}
+  DB.items=items; closeModal(); renderTable();
+  toast(editId?'Item updated':'Item added','success');
+}
+function deleteItem(id) { if(!confirm('Delete this item?')) return; DB.items=DB.items.filter(i=>i.id!==id); renderTable(); toast('Item deleted'); }
+function closeModal() { document.getElementById('itemModal').classList.remove('open'); }
+
+// ─── ADJ MODAL ────────────────────────────────────────────────────────────────
+function openAdjModal(id) {
+  const item=DB.items.find(i=>i.id===id); if(!item) return;
+  adjItemId=id;
+  document.getElementById('adjModalName').textContent=item.name+' — Current qty: '+item.qty;
+  document.getElementById('adjAmount').value=1; document.getElementById('adjDir').value='in';
+  document.getElementById('adjModal').classList.add('open');
+}
+function applyAdjModal() {
+  const items=DB.items; const idx=items.findIndex(i=>i.id===adjItemId); if(idx===-1) return;
+  const dir=document.getElementById('adjDir').value;
+  const amt=parseInt(document.getElementById('adjAmount').value)||0;
+  const prev=items[idx].qty;
+  if(dir==='set') items[idx].qty=amt;
+  else if(dir==='in') items[idx].qty+=amt;
+  else if(dir==='out') items[idx].qty=Math.max(0,items[idx].qty-amt);
+  addLog(items[idx],dir==='set'?'adj':dir,Math.abs(items[idx].qty-prev)||amt);
+  DB.items=items; document.getElementById('adjModal').classList.remove('open');
+  renderTable(); toast('Qty updated','success');
+}
+
+// ─── LOG ──────────────────────────────────────────────────────────────────────
+function addLog(item,dir,qty) {
+  const log=DB.log;
+  log.unshift({id:Date.now(),itemId:item.id,name:item.name,dir,qty,ts:new Date().toISOString()});
+  if(log.length>200) log.length=200; DB.log=log;
+}
+function renderLog() {
+  const log=DB.log; const el=document.getElementById('logList');
+  if(!log.length){el.innerHTML='<div class="empty"><div class="icon">📋</div>No transactions yet</div>';return;}
+  el.innerHTML=log.map(entry=>{
+    const d=new Date(entry.ts);
+    const label=entry.dir==='in'?'+IN':entry.dir==='out'?'−OUT':'ADJ';
+    const cls=entry.dir==='in'?'in':entry.dir==='out'?'out':'adj';
+    return `<div class="log-entry">
+      <div class="log-dir ${cls}">${label}</div>
+      <div class="log-info"><div class="log-name">${esc(entry.name)}</div><div class="log-meta">${d.toLocaleDateString()} ${d.toLocaleTimeString()}</div></div>
+      <div class="log-qty" style="color:var(--${entry.dir==='in'?'green':entry.dir==='out'?'red':'accent'})">${entry.dir==='out'?'−':'+'}${entry.qty}</div>
+    </div>`;
+  }).join('');
+}
+function clearLog() { if(!confirm('Clear all transaction history?')) return; DB.log=[]; renderLog(); toast('Log cleared'); }
+
+// ─── CSV ──────────────────────────────────────────────────────────────────────
+function exportCSV() {
+  const rows=[['Name','Barcode','Category','Qty','Low Stock','Cost','Price','Notes']];
+  DB.items.forEach(i=>rows.push([i.name,i.barcode||'',i.category||'',i.qty,i.lowStock||2,i.cost||'',i.price||'',i.notes||'']));
+  const csv=rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const a=document.createElement('a'); a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='lakeview-inventory-'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
+  toast('CSV exported','success');
+}
+
+// ─── GOOGLE DRIVE SYNC ────────────────────────────────────────────────────────
+function loadGoogleScripts(clientId) {
+  return new Promise(resolve => {
+    let loaded=0; const done=()=>{if(++loaded===2) resolve();};
+    if(!document.getElementById('gapi-script')) {
+      const s=document.createElement('script'); s.id='gapi-script'; s.src='https://apis.google.com/js/api.js';
+      s.onload=()=>{gapi.load('client',async()=>{await gapi.client.init({});gapiInited=true;done();});};
+      document.head.appendChild(s);
+    } else {gapiInited=true;done();}
+    if(!document.getElementById('gis-script')) {
+      const s=document.createElement('script'); s.id='gis-script'; s.src='https://accounts.google.com/gsi/client';
+      s.onload=()=>{tokenClient=google.accounts.oauth2.initTokenClient({client_id:clientId,scope:DRIVE_SCOPES,callback:handleTokenResponse});gisInited=true;done();};
+      document.head.appendChild(s);
+    } else {tokenClient=google.accounts.oauth2.initTokenClient({client_id:clientId,scope:DRIVE_SCOPES,callback:handleTokenResponse});gisInited=true;done();}
+  });
+}
+function openDriveModal() {
+  let isConnected = false;
+  try { isConnected = !!(typeof gapi !== 'undefined' && gapi.client && gapi.client.getToken()); } catch(e) {}
+  document.getElementById('driveSetupPanel').style.display = isConnected ? 'none' : 'block';
+  document.getElementById('driveConnectedPanel').style.display = isConnected ? 'block' : 'none';
+  if (DB.clientId) document.getElementById('driveClientId').value = DB.clientId;
+  if (isConnected) updateConnectedUI();
+  document.getElementById('driveModal').classList.add('open');
+}
+function saveDriveClientId() {
+  const id=document.getElementById('driveClientId').value.trim();
+  if(!id||!id.includes('.apps.googleusercontent.com')){toast('Enter a valid Client ID','error');return;}
+  DB.clientId=id; document.getElementById('driveModal').classList.remove('open'); initDrive();
+}
+async function initDrive() {
+  const clientId=DB.clientId; if(!clientId){updateSyncUI('disconnected');return;}
+  updateSyncUI('syncing');
+  try {
+    await loadGoogleScripts(clientId);
+    if(gapi.client.getToken()) await syncFromDrive();
+    else tokenClient.requestAccessToken({prompt:''});
+  } catch(e) {console.error(e);updateSyncUI('error');toast('Drive init error','error');}
+}
+async function handleTokenResponse(resp) {
+  if(resp.error){updateSyncUI('error');toast('Sign-in failed: '+resp.error,'error');return;}
+  updateSyncUI('syncing');
+  try {
+    const info=await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{Authorization:'Bearer '+gapi.client.getToken().access_token}}).then(r=>r.json());
+    localStorage.setItem('lf_drive_user',JSON.stringify({name:info.name,email:info.email}));
+    updateConnectedUI();
+    document.getElementById('driveSetupPanel').style.display='none';
+    document.getElementById('driveConnectedPanel').style.display='block';
+    document.getElementById('syncNowBtn').style.display='';
+    document.getElementById('setupBanner').style.display='none';
+    await syncFromDrive();
+  } catch(e){console.error(e);updateSyncUI('error');}
+}
+function updateConnectedUI() {
+  try {
+    const u=JSON.parse(localStorage.getItem('lf_drive_user')||'{}');
+    document.getElementById('driveUserName').textContent=u.name||'Connected';
+    document.getElementById('driveUserEmail').textContent=u.email||'';
+    const ls=DB.lastSync;
+    document.getElementById('driveLastSync').textContent=ls?'Last synced: '+new Date(ls).toLocaleString():'Last synced: never';
+  } catch {}
+}
+function updateSyncUI(state) {
+  const pill=document.getElementById('syncPill');
+  const label=document.getElementById('syncLabel');
+  pill.className='sync-pill'+(state==='connected'?' connected':state==='syncing'?' syncing':state==='error'?' error':'');
+  label.textContent=state==='syncing'?'Syncing…':state==='connected'?'Synced':state==='error'?'Error':'Drive';
+}
+async function getDriveFileId() {
+  if(driveFileId) return driveFileId;
+  const res=await gapi.client.request({path:'https://www.googleapis.com/drive/v3/files',method:'GET',params:{q:`name='${DATA_FILENAME}' and trashed=false`,spaces:'drive',fields:'files(id,name)'}});
+  const files=res.result.files;
+  if(files&&files.length>0){driveFileId=files[0].id;return driveFileId;}
+  return null;
+}
+async function syncFromDrive() {
+  updateSyncUI('syncing');
+  try {
+    const fileId=await getDriveFileId();
+    if(fileId) {
+      const res=await gapi.client.request({path:`https://www.googleapis.com/drive/v3/files/${fileId}`,method:'GET',params:{alt:'media'}});
+      const data=typeof res.result==='string'?JSON.parse(res.result):res.result;
+      if(data.items) localStorage.setItem('lf_items',JSON.stringify(data.items));
+      if(data.log) localStorage.setItem('lf_log',JSON.stringify(data.log));
+      renderTable(); renderStats();
+      if(document.getElementById('logView').classList.contains('active')) renderLog();
+    } else { await saveToDrive(); }
+    DB.lastSync=new Date().toISOString(); updateSyncUI('connected'); updateConnectedUI();
+    toast('Synced with Google Drive','success');
+  } catch(e){console.error('Sync error:',e);updateSyncUI('error');toast('Sync failed','error');}
+}
+async function saveToDrive() {
+  try { if(!(typeof gapi !== 'undefined' && gapi.client && gapi.client.getToken())) return; } catch(e) { return; }
+  const payload=JSON.stringify({items:DB.items,log:DB.log,updated:new Date().toISOString()});
+  try {
+    const fileId=await getDriveFileId();
+    if(fileId) {
+      await gapi.client.request({path:`https://www.googleapis.com/upload/drive/v3/files/${fileId}`,method:'PATCH',params:{uploadType:'media'},headers:{'Content-Type':'application/json'},body:payload});
+    } else {
+      const meta=await gapi.client.request({path:'https://www.googleapis.com/drive/v3/files',method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:DATA_FILENAME,mimeType:'application/json'})});
+      driveFileId=meta.result.id;
+      await gapi.client.request({path:`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}`,method:'PATCH',params:{uploadType:'media'},headers:{'Content-Type':'application/json'},body:payload});
+    }
+    DB.lastSync=new Date().toISOString(); updateSyncUI('connected');
+  } catch(e){console.error('Save error:',e);updateSyncUI('error');}
+}
+function scheduleSyncSave() {
+  try { if(!(typeof gapi !== 'undefined' && gapi.client && gapi.client.getToken())) return; } catch(e) { return; }
+  clearTimeout(syncTimeout); syncTimeout=setTimeout(()=>saveToDrive(),3000);
+}
+async function manualSync() {
+  let connected = false;
+  try { connected = !!(typeof gapi !== 'undefined' && gapi.client && gapi.client.getToken()); } catch(e) {}
+  if(!connected){ if(DB.clientId) initDrive(); else openDriveModal(); return; }
+  await syncFromDrive();
+}
+function disconnectDrive() {
+  if(!confirm('Disconnect Google Drive? Data stays on this device.')) return;
+  try{google.accounts.oauth2.revoke(gapi.client.getToken().access_token,()=>{});}catch{}
+  gapi.client.setToken(null); driveFileId=null;
+  localStorage.removeItem('lf_drive_user'); updateSyncUI('disconnected');
+  document.getElementById('driveConnectedPanel').style.display='none';
+  document.getElementById('driveSetupPanel').style.display='block';
+  document.getElementById('syncNowBtn').style.display='none';
+  document.getElementById('setupBanner').style.display='flex';
+  document.getElementById('driveModal').classList.remove('open');
+  toast('Disconnected from Google Drive');
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function toast(msg,type=''){const el=document.getElementById('toast');el.textContent=msg;el.className='show '+type;clearTimeout(el._t);el._t=setTimeout(()=>el.className='',2500);}
+function updateCatList(){const cats=[...new Set(DB.items.map(i=>i.category).filter(Boolean))];document.getElementById('catList').innerHTML=cats.map(c=>`<option value="${esc(c)}">`).join('');}
+
+
+// ─── PDF IMPORT (Crow Wholesale) ──────────────────────────────────────────────
+let pdfParsed = [];
+
+function loadPdfJs() {
+  return new Promise(resolve => {
+    if (window.pdfjsLib) { resolve(); return; }
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    s.onload = () => {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      resolve();
+    };
+    document.head.appendChild(s);
+  });
+}
+
+async function handlePdfUpload(event) {
+  const file = event.target.files[0];
+  event.target.value = '';
+  if (!file) return;
+  toast('Reading PDF…');
+  try {
+    await loadPdfJs();
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+    // Collect all text items with position from all pages
+    const allItems = [];
+    for (let p = 1; p <= pdf.numPages; p++) {
+      const page = await pdf.getPage(p);
+      const tc = await page.getTextContent();
+      const vp = page.getViewport({ scale: 1 });
+      tc.items.forEach(item => {
+        allItems.push({
+          text: item.str.trim(),
+          x: Math.round(item.transform[4]),
+          y: Math.round(vp.height - item.transform[5]), // flip Y so top=0
+          page: p
+        });
+      });
+    }
+
+    // Crow invoice structure — detect product rows by finding lines where
+    // col0 is a 9-digit item number and col1 is a 12-digit UPC barcode.
+    // Each product spans multiple text lines at the same approximate Y band.
+    // Strategy: group by Y (±4px tolerance), then identify product rows.
+    const bands = {};
+    allItems.forEach(item => {
+      if (!item.text) return;
+      const band = Math.round(item.y / 4) * 4;
+      if (!bands[band]) bands[band] = [];
+      bands[band].push(item);
+    });
+
+    // Sort bands top to bottom
+    const sortedBands = Object.keys(bands).sort((a,b) => a-b).map(k => ({
+      y: parseInt(k),
+      items: bands[k].sort((a,b) => a.x - b.x)
+    }));
+
+    // Find the header row to locate column X positions
+    let headerBand = null;
+    for (const band of sortedBands) {
+      const texts = band.items.map(i => i.text.toLowerCase()).join(' ');
+      if (texts.includes('description') && texts.includes('shipped') && texts.includes('unit price')) {
+        headerBand = band; break;
+      }
+    }
+
+    // Parse product rows — each product has item# on one line, UPC on next, description on same or next
+    // Crow layout per product block (identified by 9-digit item number at left):
+    // Line 1: [ItemNo]  [FacPartNo]  [Description...]  [Shipped]  [UnitPrice]  [ExtPrice]  [Total]
+    // Line 2: [UPC]     [SupplierNo or continuation of description]
+    // Line 3 (optional): [continuation of description]  [SupplierNo]
+
+    pdfParsed = [];
+    let i = 0;
+    while (i < sortedBands.length) {
+      const band = sortedBands[i];
+      const texts = band.items.map(b => b.text);
+      const fullText = texts.join(' ');
+
+      // Detect a product start: first token is a 9-digit item number
+      const firstToken = texts[0] || '';
+      if (/^\d{9}$/.test(firstToken)) {
+        // Collect this and next 1-2 bands as the product block
+        const blockBands = [band];
+        if (sortedBands[i+1] && sortedBands[i+1].y - band.y < 30) {
+          blockBands.push(sortedBands[i+1]);
+          if (sortedBands[i+2] && sortedBands[i+2].y - sortedBands[i+1].y < 20) {
+            blockBands.push(sortedBands[i+2]);
+          }
+        }
+        const allBlockItems = blockBands.flatMap(b => b.items).sort((a,b) => a.x - b.x);
+        const allTokens = allBlockItems.map(t => t.text).filter(t => t.length > 0);
+
+        // Extract UPC: 12-digit number
+        const upc = allTokens.find(t => /^\d{12}$/.test(t)) || '';
+        // Extract item number (9-digit, already found)
+        const itemNo = firstToken;
+        // Extract shipped qty: small integer (1-99), appears after description
+        // Extract unit price: decimal like 123.52
+        const prices = allTokens.filter(t => /^\d+\.\d{2}$/.test(t)).map(parseFloat);
+        const unitPrice = prices.length > 0 ? Math.min(...prices) : 0; // smallest = unit price
+        const shipped = (() => {
+          for (let t of allTokens) {
+            const n = parseInt(t);
+            if (!isNaN(n) && n > 0 && n < 100 && /^\d{1,2}$/.test(t)) return n;
+          }
+          return 0;
+        })();
+        // Description: longest text token that isn't a number/UPC/itemNo
+        const descTokens = allTokens.filter(t =>
+          t !== itemNo && t !== upc &&
+          !/^\d+$/.test(t) &&
+          !/^\d+\.\d{2}$/.test(t) &&
+          t.length > 3
+        );
+        const description = descTokens.slice(0, 3).join(' ').trim();
+
+        if (description && (upc || itemNo)) {
+          pdfParsed.push({ name: description, barcode: upc, itemNo, qty: shipped, cost: unitPrice, notes: 'Crow #' + itemNo });
+        }
+        i += blockBands.length;
+      } else {
+        i++;
+      }
+    }
+
+    if (pdfParsed.length === 0) {
+      toast('No product rows found — is this a Crow Wholesale invoice?', 'error');
+      return;
+    }
+    showPdfModal();
+  } catch(e) {
+    console.error(e);
+    toast('Failed to read PDF: ' + e.message, 'error');
+  }
+}
+
+function showPdfModal() {
+  document.getElementById('pdfRowCount').textContent = pdfParsed.length;
+  document.getElementById('pdfStep1').style.display = 'block';
+  document.getElementById('pdfStep2').style.display = 'none';
+  document.getElementById('pdfColumnMappers').style.display = 'none'; // not needed for Crow
+
+  // Preview table
+  const cols = ['Item Name', 'UPC / Barcode', 'Qty Shipped', 'Unit Cost', 'Notes'];
+  document.getElementById('pdfPreviewHead').innerHTML = cols.map(c => `<th>${c}</th>`).join('');
+  document.getElementById('pdfPreviewBody').innerHTML = pdfParsed.slice(0, 8).map(r =>
+    `<tr>
+      <td>${esc(r.name)}</td>
+      <td class="barcode-cell">${esc(r.barcode)}</td>
+      <td style="text-align:center">${r.qty}</td>
+      <td>$${r.cost.toFixed(2)}</td>
+      <td style="color:var(--muted);font-size:11px">${esc(r.notes)}</td>
+    </tr>`
+  ).join('');
+
+  document.getElementById('pdfSkipFirst').parentElement.style.display = 'none';
+  document.getElementById('pdfModal').classList.add('open');
+}
+
+function importPdfRows() {
+  const items = DB.items;
+  let added = 0, updated = 0, skipped = 0;
+  pdfParsed.forEach(entry => {
+    if (!entry.name) { skipped++; return; }
+    // Check if item already exists by UPC or by name
+    const existingIdx = items.findIndex(i =>
+      (entry.barcode && i.barcode === entry.barcode) ||
+      i.name.toLowerCase() === entry.name.toLowerCase()
+    );
+    if (existingIdx !== -1) {
+      // Update qty and cost but don't overwrite name/barcode
+      items[existingIdx].qty += entry.qty;
+      if (entry.cost) items[existingIdx].cost = entry.cost;
+      updated++;
+    } else {
+      items.push({
+        id: 'item_' + Date.now() + '_' + Math.random().toString(36).slice(2),
+        name: entry.name,
+        barcode: entry.barcode,
+        qty: entry.qty,
+        cost: entry.cost,
+        price: 0,
+        lowStock: 2,
+        notes: entry.notes,
+        category: ''
+      });
+      added++;
+    }
+  });
+  DB.items = items;
+  renderTable(); renderStats();
+  document.getElementById('pdfStep1').style.display = 'none';
+  document.getElementById('pdfStep2').style.display = 'block';
+  document.getElementById('pdfResultMsg').textContent = `${added + updated} Items Processed`;
+  document.getElementById('pdfResultDetail').textContent =
+    `${added} new items added · ${updated} existing items qty updated · ${skipped} skipped`;
+}
+
+function closePdfModal() {
+  document.getElementById('pdfModal').classList.remove('open');
+  pdfParsed = [];
+  document.getElementById('pdfColumnMappers').style.display = '';
+  const skipLabel = document.querySelector('#pdfSkipFirst')?.parentElement;
+  if (skipLabel) skipLabel.style.display = '';
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+renderStats(); renderTable();
+if(!DB.clientId) document.getElementById('setupBanner').style.display='flex';
+else { document.getElementById('syncNowBtn').style.display=''; initDrive(); }
+</script>
+</body>
+</html>
