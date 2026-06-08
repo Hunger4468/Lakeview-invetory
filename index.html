@@ -91,7 +91,7 @@
   .stat-card .label { font-family: var(--font-mono); font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
   .stat-card .value { font-family: var(--font-display); font-size: 36px; color: var(--accent); line-height: 1; }
   .stat-card .value.red { color: var(--red); }
-  .stat-card .value.green { color: var(--green); }
+  .stat-card .value.blue { color: var(--blue); }
 
   /* TOOLBAR & BUTTONS */
   .toolbar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
@@ -556,11 +556,19 @@
     <h2>LOG SALE</h2>
     <div class="form-group" style="position:relative">
       <label>Item *</label>
-      <input id="saleItemSearch" placeholder="Search by name, barcode, or part #..." autocomplete="off"
-        oninput="filterSaleItems()" onfocus="showSaleDropdown()" onkeydown="saleSearchKey(event)"
-        style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--font-body);font-size:14px;padding:10px 13px;border-radius:6px;outline:none;">
+      <div style="display:flex;gap:8px">
+        <input id="saleItemSearch" placeholder="Search by name, barcode, or part #..." autocomplete="off"
+          oninput="filterSaleItems()" onfocus="showSaleDropdown()" onkeydown="saleSearchKey(event)"
+          style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--font-body);font-size:14px;padding:10px 13px;border-radius:6px;outline:none;">
+        <button class="btn" id="saleScanBtn" onclick="toggleSaleScanner()" title="Scan barcode" style="padding:10px 12px;font-size:16px">📷</button>
+      </div>
       <input type="hidden" id="saleItemId">
-      <div id="saleDropdown" style="display:none;position:absolute;left:0;right:0;top:100%;background:var(--surface2);border:1px solid var(--accent);border-top:none;border-radius:0 0 6px 6px;max-height:200px;overflow-y:auto;z-index:300;box-shadow:0 8px 24px rgba(0,0,0,0.4)"></div>
+      <div id="saleDropdown" style="display:none;position:absolute;left:0;right:0;top:calc(100% - 2px);background:var(--surface2);border:1px solid var(--accent);border-top:none;border-radius:0 0 6px 6px;max-height:200px;overflow-y:auto;z-index:300;box-shadow:0 8px 24px rgba(0,0,0,0.4)"></div>
+    </div>
+    <!-- Inline barcode scanner -->
+    <div id="saleScannerWrap" style="display:none;margin-bottom:12px">
+      <div id="sale-qr-reader" style="border-radius:8px;overflow:hidden;border:2px solid var(--accent)"></div>
+      <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);text-align:center;margin-top:6px;letter-spacing:1px">POINT CAMERA AT BARCODE — CLOSES AUTOMATICALLY</div>
     </div>
     <div class="form-row">
       <div class="form-group">
@@ -586,6 +594,26 @@
     <div class="form-group">
       <label>Notes</label>
       <input id="saleNotes" placeholder="Optional note">
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;margin-bottom:4px;cursor:pointer" onclick="toggleOutOfState()">
+      <div id="oosToggle" style="width:38px;height:22px;border-radius:11px;background:var(--border);position:relative;transition:background 0.2s;flex-shrink:0">
+        <div id="oosThumb" style="width:18px;height:18px;border-radius:50%;background:var(--text);position:absolute;top:2px;left:2px;transition:left 0.2s"></div>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:600">Out-of-State Sale</div>
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted)">No NY sales tax collected</div>
+      </div>
+      <input type="hidden" id="saleOutOfState" value="0">
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;margin-bottom:4px;cursor:pointer" onclick="toggleFriendSale()">
+      <div id="friendToggle" style="width:38px;height:22px;border-radius:11px;background:var(--border);position:relative;transition:background 0.2s;flex-shrink:0">
+        <div id="friendThumb" style="width:18px;height:18px;border-radius:50%;background:var(--text);position:absolute;top:2px;left:2px;transition:left 0.2s"></div>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:600">Friend / Family Sale</div>
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted)">Discounted or at-cost — explains low/no profit</div>
+      </div>
+      <input type="hidden" id="saleFriendSale" value="0">
     </div>
     <!-- Profit preview -->
     <div id="saleProfitPreview" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:4px;display:none">
@@ -672,8 +700,9 @@ function switchView(v, btn) {
   if (v==='dashboard') { renderStats(); renderTable(); }
   if (v==='log') renderLog();
   if (v==='scan') initScanner();
-  if (v==='sales') { setSalesRange('month'); }
   else stopScanner();
+  if (v==='sales') { setSalesRange('month'); }
+  else { if (typeof stopSaleScanner === 'function') stopSaleScanner(); }
 }
 
 // ─── SCANNER (html5-qrcode) ───────────────────────────────────────────────────
@@ -1250,10 +1279,79 @@ function openSaleModal() {
   document.getElementById('saleNotes').value = '';
   document.getElementById('saleDate').value = new Date().toISOString().slice(0,10);
   document.getElementById('saleMethod').value = 'cash';
+  document.getElementById('saleOutOfState').value = '0';
+  document.getElementById('oosToggle').style.background = 'var(--border)';
+  document.getElementById('oosThumb').style.left = '2px';
+  document.getElementById('saleFriendSale').value = '0';
+  document.getElementById('friendToggle').style.background = 'var(--border)';
+  document.getElementById('friendThumb').style.left = '2px';
   document.getElementById('saleProfitPreview').style.display = 'none';
   document.getElementById('saleDropdown').style.display = 'none';
   document.getElementById('saleModal').classList.add('open');
   setTimeout(() => document.getElementById('saleItemSearch').focus(), 120);
+}
+
+function toggleOutOfState() {
+  const val = document.getElementById('saleOutOfState').value === '1';
+  document.getElementById('saleOutOfState').value = val ? '0' : '1';
+  document.getElementById('oosToggle').style.background = val ? 'var(--border)' : 'var(--blue)';
+  document.getElementById('oosThumb').style.left = val ? '2px' : '18px';
+}
+
+let saleScannerInstance = null;
+
+function toggleSaleScanner() {
+  const wrap = document.getElementById('saleScannerWrap');
+  if (saleScannerInstance) {
+    stopSaleScanner();
+  } else {
+    wrap.style.display = 'block';
+    document.getElementById('saleScanBtn').textContent = '⏹';
+    document.getElementById('saleDropdown').style.display = 'none';
+    saleScannerInstance = new Html5QrcodeScanner('sale-qr-reader', {
+      fps: 10,
+      qrbox: { width: 280, height: 120 },
+      rememberLastUsedCamera: true,
+      supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
+      formatsToSupport: [
+        Html5QrcodeSupportedFormats.EAN_13,
+        Html5QrcodeSupportedFormats.EAN_8,
+        Html5QrcodeSupportedFormats.UPC_A,
+        Html5QrcodeSupportedFormats.UPC_E,
+        Html5QrcodeSupportedFormats.CODE_128,
+        Html5QrcodeSupportedFormats.CODE_39,
+      ]
+    }, false);
+    saleScannerInstance.render(onSaleScanSuccess, () => {});
+  }
+}
+
+function onSaleScanSuccess(code) {
+  stopSaleScanner();
+  const item = DB.items.find(i => i.barcode === code);
+  if (!item) {
+    toast('Barcode not found in inventory: ' + code, 'error');
+    document.getElementById('saleItemSearch').value = code;
+    return;
+  }
+  selectSaleItem(item.id, item.name);
+  toast('Found: ' + item.name, 'success');
+}
+
+function stopSaleScanner() {
+  if (saleScannerInstance) {
+    try { saleScannerInstance.clear(); } catch {}
+    saleScannerInstance = null;
+  }
+  document.getElementById('saleScannerWrap').style.display = 'none';
+  document.getElementById('saleScanBtn').textContent = '📷';
+}
+
+function toggleFriendSale() {
+  const val = document.getElementById('saleFriendSale').value === '1';
+  document.getElementById('saleFriendSale').value = val ? '0' : '1';
+  document.getElementById('friendToggle').style.background = val ? 'var(--border)' : 'var(--accent)';
+  document.getElementById('friendThumb').style.left = val ? '2px' : '18px';
 }
 
 function filterSaleItems() {
@@ -1362,6 +1460,8 @@ function confirmSale() {
   const method = document.getElementById('saleMethod').value;
   const date = document.getElementById('saleDate').value;
   const notes = document.getElementById('saleNotes').value.trim();
+  const outOfState = document.getElementById('saleOutOfState').value === '1';
+  const friendSale = document.getElementById('saleFriendSale').value === '1';
   if (!id) { toast('Select an item', 'error'); return; }
   if (!qty || qty < 1) { toast('Enter a valid quantity', 'error'); return; }
   if (!priceEach) { toast('Enter a sale price', 'error'); return; }
@@ -1386,6 +1486,8 @@ function confirmSale() {
     method,
     date: date || new Date().toISOString().slice(0,10),
     notes,
+    outOfState,
+    friendSale,
     ts: new Date().toISOString()
   });
   SDB.sales = sales;
@@ -1397,6 +1499,7 @@ function confirmSale() {
 }
 
 function closeSaleModal() {
+  stopSaleScanner();
   document.getElementById('saleModal').classList.remove('open');
   document.getElementById('saleDropdown').style.display = 'none';
 }
@@ -1439,12 +1542,14 @@ function renderSalesView() {
   const margin = revenue > 0 ? (profit/revenue*100) : 0;
   const cashTotal = sales.filter(s=>s.method==='cash').reduce((s,x)=>s+x.revenue,0);
   const venmoTotal = sales.filter(s=>s.method==='venmo').reduce((s,x)=>s+x.revenue,0);
+  const oosRevenue = sales.filter(s=>s.outOfState).reduce((s,x)=>s+x.revenue,0);
   document.getElementById('salesStatsRow').innerHTML = `
     <div class="stat-card"><div class="label">Revenue</div><div class="value green">$${revenue.toFixed(0)}</div></div>
     <div class="stat-card"><div class="label">Cost of Goods</div><div class="value red">$${cost.toFixed(0)}</div></div>
     <div class="stat-card"><div class="label">Profit</div><div class="value ${profit>=0?'green':'red'}">$${profit.toFixed(0)}</div></div>
     <div class="stat-card"><div class="label">Margin</div><div class="value">${margin.toFixed(1)}%</div></div>
-    <div class="stat-card"><div class="label">Transactions</div><div class="value">${sales.length}</div></div>`;
+    <div class="stat-card"><div class="label">Transactions</div><div class="value">${sales.length}</div></div>
+    <div class="stat-card"><div class="label">Out-of-State</div><div class="value blue">$${oosRevenue.toFixed(0)}</div></div>`;
 
   // Monthly bar chart (last 6 months)
   const months = [];
@@ -1510,7 +1615,7 @@ function renderSalesView() {
       <span class="sale-method ${s.method}">${s.method==='venmo'?'VENMO':'CASH'}</span>
       <div class="sale-info">
         <div class="sale-name">${esc(s.itemName)}</div>
-        <div class="sale-meta">${s.date} · qty ${s.qty} @ $${s.priceEach.toFixed(2)}${s.notes?' · '+esc(s.notes):''}</div>
+        <div class="sale-meta">${s.date} · qty ${s.qty} @ $${s.priceEach.toFixed(2)}${s.outOfState?' · <span style="color:var(--blue);font-weight:700">OUT-OF-STATE</span>':''}${s.friendSale?' · <span style="color:var(--accent);font-weight:700">FRIEND/FAMILY</span>':''}${s.notes?' · '+esc(s.notes):''}</div>
       </div>
       <div class="sale-amounts">
         <div class="sale-revenue">$${s.revenue.toFixed(2)}</div>
@@ -1530,8 +1635,8 @@ function deleteSale(id) {
 
 function exportSalesCSV() {
   const sales = getFilteredSales();
-  const rows = [['Date','Item','Qty','Price Each','Revenue','Cost','Profit','Method','Notes']];
-  sales.forEach(s => rows.push([s.date, s.itemName, s.qty, s.priceEach.toFixed(2), s.revenue.toFixed(2), (s.cost||0).toFixed(2), (s.profit||0).toFixed(2), s.method, s.notes||'']));
+  const rows = [['Date','Item','Qty','Price Each','Revenue','Cost','Profit','Method','Out-of-State','Friend/Family','Notes']];
+  sales.forEach(s => rows.push([s.date, s.itemName, s.qty, s.priceEach.toFixed(2), s.revenue.toFixed(2), (s.cost||0).toFixed(2), (s.profit||0).toFixed(2), s.method, s.outOfState?'Yes':'No', s.friendSale?'Yes':'No', s.notes||'']));
   const csv = rows.map(r => r.map(c => '"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
   const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
   a.download = 'lakeview-sales-' + new Date().toISOString().slice(0,10) + '.csv'; a.click();
