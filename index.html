@@ -145,7 +145,7 @@
 
   /* MODAL */
   .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 200; align-items: center; justify-content: center; padding: 20px; }
-  .modal-overlay.open { display: flex; }
+  .modal-overlay.open { display: flex !important; }
   .modal {
     background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
     padding: 28px; width: 100%; max-width: 480px; position: relative; max-height: 90vh; overflow-y: auto;
@@ -724,11 +724,12 @@ function loadGoogleScripts(clientId) {
   });
 }
 function openDriveModal() {
-  const isConnected=!!gapi?.client?.getToken?.();
-  document.getElementById('driveSetupPanel').style.display=isConnected?'none':'block';
-  document.getElementById('driveConnectedPanel').style.display=isConnected?'block':'none';
-  if(DB.clientId) document.getElementById('driveClientId').value=DB.clientId;
-  if(isConnected) updateConnectedUI();
+  let isConnected = false;
+  try { isConnected = !!(typeof gapi !== 'undefined' && gapi.client && gapi.client.getToken()); } catch(e) {}
+  document.getElementById('driveSetupPanel').style.display = isConnected ? 'none' : 'block';
+  document.getElementById('driveConnectedPanel').style.display = isConnected ? 'block' : 'none';
+  if (DB.clientId) document.getElementById('driveClientId').value = DB.clientId;
+  if (isConnected) updateConnectedUI();
   document.getElementById('driveModal').classList.add('open');
 }
 function saveDriveClientId() {
@@ -798,7 +799,7 @@ async function syncFromDrive() {
   } catch(e){console.error('Sync error:',e);updateSyncUI('error');toast('Sync failed','error');}
 }
 async function saveToDrive() {
-  if(!gapi?.client?.getToken()) return;
+  try { if(!(typeof gapi !== 'undefined' && gapi.client && gapi.client.getToken())) return; } catch(e) { return; }
   const payload=JSON.stringify({items:DB.items,log:DB.log,updated:new Date().toISOString()});
   try {
     const fileId=await getDriveFileId();
@@ -812,9 +813,14 @@ async function saveToDrive() {
     DB.lastSync=new Date().toISOString(); updateSyncUI('connected');
   } catch(e){console.error('Save error:',e);updateSyncUI('error');}
 }
-function scheduleSyncSave() { if(!gapi?.client?.getToken()) return; clearTimeout(syncTimeout); syncTimeout=setTimeout(()=>saveToDrive(),3000); }
+function scheduleSyncSave() {
+  try { if(!(typeof gapi !== 'undefined' && gapi.client && gapi.client.getToken())) return; } catch(e) { return; }
+  clearTimeout(syncTimeout); syncTimeout=setTimeout(()=>saveToDrive(),3000);
+}
 async function manualSync() {
-  if(!gapi?.client?.getToken()){if(DB.clientId) initDrive(); else openDriveModal(); return;}
+  let connected = false;
+  try { connected = !!(typeof gapi !== 'undefined' && gapi.client && gapi.client.getToken()); } catch(e) {}
+  if(!connected){ if(DB.clientId) initDrive(); else openDriveModal(); return; }
   await syncFromDrive();
 }
 function disconnectDrive() {
