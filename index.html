@@ -898,8 +898,11 @@ function switchView(v, btn) {
   const target = document.getElementById(v + 'View');
   if (target) {
     target.classList.add('active');
-    target.style.cssText = 'display:block !important';
+    target.style.cssText = 'display:block !important; visibility:visible !important; opacity:1 !important';
   }
+
+  // Scroll to top
+  window.scrollTo(0, 0);
 
   // Update nav
   document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
@@ -912,13 +915,19 @@ function switchView(v, btn) {
     if (typeof stopCartScanner === 'function') stopCartScanner();
   }
 
-  // Render after paint
+  // Render immediately AND after paint as fallback
+  if (v === 'dashboard') { renderStats(); renderTable(); }
+  else if (v === 'log') renderLog();
+  else if (v === 'sales') setSalesRange('month');
+  else if (v === 'scan') initScanner();
+
+  // Second render pass after browser paint as safety net
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
+      if (target) {
+        target.style.cssText = 'display:block !important; visibility:visible !important; opacity:1 !important';
+      }
       if (v === 'dashboard') { renderStats(); renderTable(); }
-      else if (v === 'log') renderLog();
-      else if (v === 'sales') setSalesRange('month');
-      else if (v === 'scan') initScanner();
     });
   });
 }
