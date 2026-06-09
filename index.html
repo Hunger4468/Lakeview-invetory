@@ -543,7 +543,7 @@
 <!-- ADJ MODAL -->
 <div class="modal-overlay" id="adjModal">
   <div class="modal" style="max-width:360px">
-    <button class="close-btn" onclick="document.getElementById('adjModal').classList.remove('open')">✕</button>
+    <button class="close-btn" onclick="hideModal('adjModal')">✕</button>
     <h2>ADJUST QTY</h2>
     <div id="adjModalName" style="font-size:15px;margin-bottom:16px;color:var(--muted)"></div>
     <div class="form-row">
@@ -553,7 +553,7 @@
       <div class="form-group"><label>Amount</label><input id="adjAmount" type="number" min="0" value="1"></div>
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="document.getElementById('adjModal').classList.remove('open')">Cancel</button>
+      <button class="btn" onclick="hideModal('adjModal')">Cancel</button>
       <button class="btn primary" onclick="applyAdjModal()">Apply</button>
     </div>
   </div>
@@ -562,7 +562,7 @@
 <!-- DRIVE MODAL -->
 <div class="modal-overlay" id="driveModal">
   <div class="modal" style="max-width:540px">
-    <button class="close-btn" onclick="document.getElementById('driveModal').classList.remove('open')">✕</button>
+    <button class="close-btn" onclick="hideModal('driveModal')">✕</button>
     <h2>GOOGLE DRIVE SYNC</h2>
     <div id="driveSetupPanel">
       <p style="font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.7">
@@ -582,7 +582,7 @@
         <input id="driveClientId" placeholder="xxxxxxxxxxxx.apps.googleusercontent.com" style="font-family:var(--font-mono);font-size:12px">
       </div>
       <div class="modal-footer">
-        <button class="btn" onclick="document.getElementById('driveModal').classList.remove('open')">Cancel</button>
+        <button class="btn" onclick="hideModal('driveModal')">Cancel</button>
         <button class="btn primary" onclick="saveDriveClientId()">Save &amp; Connect</button>
       </div>
     </div>
@@ -596,7 +596,7 @@
       </div>
       <div style="font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-bottom:18px" id="driveLastSync">Last synced: never</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <button class="btn drive" onclick="manualSync();document.getElementById('driveModal').classList.remove('open')">↻ Sync Now</button>
+        <button class="btn drive" onclick="manualSync();hideModal('driveModal')">↻ Sync Now</button>
         <button class="btn danger" onclick="disconnectDrive()">Disconnect</button>
       </div>
     </div>
@@ -1049,7 +1049,7 @@ function openAddModal() {
   document.getElementById('editId').value='';
   ['fName','fBarcode','fCategory','fNotes'].forEach(id=>document.getElementById(id).value='');
   ['fQty','fLow','fCost','fPrice'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('itemModal').classList.add('open');
+  showModal('itemModal');
   setTimeout(()=>document.getElementById('fName').focus(),100);
 }
 function openEditModal(id) {
@@ -1064,7 +1064,7 @@ function openEditModal(id) {
   document.getElementById('fCost').value=item.cost||'';
   document.getElementById('fPrice').value=item.price||'';
   document.getElementById('fNotes').value=item.notes||'';
-  document.getElementById('itemModal').classList.add('open');
+  showModal('itemModal');
 }
 function saveItem() {
   const name=document.getElementById('fName').value.trim();
@@ -1079,7 +1079,7 @@ function saveItem() {
   toast(editId?'Item updated':'Item added','success');
 }
 function deleteItem(id) { if(!confirm('Delete this item?')) return; DB.items=DB.items.filter(i=>i.id!==id); renderTable(); toast('Item deleted'); }
-function closeModal() { document.getElementById('itemModal').classList.remove('open'); }
+function closeModal() { hideModal('itemModal'); }
 
 // ─── ADJ MODAL ────────────────────────────────────────────────────────────────
 function openAdjModal(id) {
@@ -1087,7 +1087,7 @@ function openAdjModal(id) {
   adjItemId=id;
   document.getElementById('adjModalName').textContent=item.name+' — Current qty: '+item.qty;
   document.getElementById('adjAmount').value=1; document.getElementById('adjDir').value='in';
-  document.getElementById('adjModal').classList.add('open');
+  showModal('adjModal');
 }
 function applyAdjModal() {
   const items=DB.items; const idx=items.findIndex(i=>i.id===adjItemId); if(idx===-1) return;
@@ -1098,7 +1098,7 @@ function applyAdjModal() {
   else if(dir==='in') items[idx].qty+=amt;
   else if(dir==='out') items[idx].qty=Math.max(0,items[idx].qty-amt);
   addLog(items[idx],dir==='set'?'adj':dir,Math.abs(items[idx].qty-prev)||amt);
-  DB.items=items; document.getElementById('adjModal').classList.remove('open');
+  DB.items=items; hideModal('adjModal');
   renderTable(); toast('Qty updated','success');
 }
 
@@ -1157,12 +1157,12 @@ function openDriveModal() {
   document.getElementById('driveConnectedPanel').style.display = isConnected ? 'block' : 'none';
   if (DB.clientId) document.getElementById('driveClientId').value = DB.clientId;
   if (isConnected) updateConnectedUI();
-  document.getElementById('driveModal').classList.add('open');
+  showModal('driveModal');
 }
 function saveDriveClientId() {
   const id=document.getElementById('driveClientId').value.trim();
   if(!id||!id.includes('.apps.googleusercontent.com')){toast('Enter a valid Client ID','error');return;}
-  DB.clientId=id; document.getElementById('driveModal').classList.remove('open'); initDrive();
+  DB.clientId=id; hideModal('driveModal'); initDrive();
 }
 async function initDrive() {
   const clientId=DB.clientId; if(!clientId){updateSyncUI('disconnected');return;}
@@ -1261,7 +1261,7 @@ function disconnectDrive() {
   document.getElementById('driveSetupPanel').style.display='block';
   document.getElementById('syncNowBtn').style.display='none';
   document.getElementById('setupBanner').style.display='flex';
-  document.getElementById('driveModal').classList.remove('open');
+  hideModal('driveModal');
   toast('Disconnected from Google Drive');
 }
 
@@ -1701,7 +1701,7 @@ function showPdfModal(manualMode=false) {
       `<tr><td>${esc(r.name)}</td><td class="barcode-cell">${esc(r.barcode||'')}</td><td style="text-align:center">${r.qty||0}</td><td>${r.cost?'$'+r.cost.toFixed(2):'—'}</td><td style="color:var(--muted);font-size:11px">${esc(r.notes||'')}</td></tr>`
     ).join('');
   }
-  document.getElementById('pdfModal').classList.add('open');
+  showModal('pdfModal');
 }
 
 function importPdfRows() {
@@ -1750,7 +1750,7 @@ function importPdfRows() {
 }
 
 function closePdfModal() {
-  document.getElementById('pdfModal').classList.remove('open');
+  hideModal('pdfModal');
   pdfParsed = []; pdfRawRows = []; pdfDetectedSource = '';
   document.getElementById('pdfColumnMappers').style.display = '';
   const skipLabel = document.querySelector('#pdfSkipFirst')?.parentElement;
@@ -1781,7 +1781,7 @@ function openSaleModal() {
   document.getElementById('friendThumb').style.left = '2px';
   document.getElementById('saleProfitPreview').style.display = 'none';
   document.getElementById('saleDropdown').style.display = 'none';
-  document.getElementById('saleModal').classList.add('open');
+  showModal('saleModal');
   setTimeout(() => document.getElementById('saleItemSearch').focus(), 120);
 }
 
@@ -1994,7 +1994,7 @@ function confirmSale() {
 
 function closeSaleModal() {
   stopSaleScanner();
-  document.getElementById('saleModal').classList.remove('open');
+  hideModal('saleModal');
   document.getElementById('saleDropdown').style.display = 'none';
 }
 
@@ -2156,13 +2156,13 @@ function openCartModal() {
   document.getElementById('cartFriendToggle').style.background = 'var(--border)';
   document.getElementById('cartFriendThumb').style.left = '2px';
   renderCart();
-  document.getElementById('cartModal').classList.add('open');
+  showModal('cartModal');
   setTimeout(() => document.getElementById('cartItemSearch').focus(), 120);
 }
 
 function closeCartModal() {
   stopCartScanner();
-  document.getElementById('cartModal').classList.remove('open');
+  hideModal('cartModal');
   document.getElementById('cartDropdown').style.display = 'none';
 }
 
@@ -2428,14 +2428,10 @@ let templatesFromCart = false;
 function openTemplatesModal(fromCart=false) {
   templatesFromCart = fromCart;
   renderTemplatesList();
-  const el = document.getElementById('templatesModal');
-  el.classList.add('open');
-  el.style.display = 'flex';
+  showModal('templatesModal');
 }
 function closeTemplatesModal() {
-  const el = document.getElementById('templatesModal');
-  el.classList.remove('open');
-  el.style.display = 'none';
+  hideModal('templatesModal');
 }
 
 function renderTemplatesList() {
@@ -2493,7 +2489,7 @@ function loadTemplate(id) {
     document.getElementById('cartFriend').value = '0';
     document.getElementById('cartFriendToggle').style.background = 'var(--border)';
     document.getElementById('cartFriendThumb').style.left = '2px';
-    document.getElementById('cartModal').classList.add('open');
+    showModal('cartModal');
   }
   renderCart();
   // Hide dropdown in case it appeared
@@ -2518,7 +2514,6 @@ function openTemplateBuildModal(editId=null) {
   document.getElementById('tmplDesc').value = '';
   document.getElementById('tmplItemSearch').value = '';
   document.getElementById('tmplDropdown').style.display = 'none';
-
   if (editId) {
     const t = TDB.templates.find(t => t.id === editId);
     if (t) {
@@ -2528,26 +2523,14 @@ function openTemplateBuildModal(editId=null) {
     }
   }
   renderTmplItems();
-
-  // Close templates list, open builder
-  const tl = document.getElementById('templatesModal');
-  const tb = document.getElementById('templateBuildModal');
-  tl.classList.remove('open');
-  tl.style.display = 'none';
-  tb.classList.add('open');
-  tb.style.display = 'flex';
+  switchModal('templatesModal', 'templateBuildModal');
   setTimeout(() => document.getElementById('tmplName').focus(), 120);
 }
 
 function closeTemplateBuildModal() {
-  const tl = document.getElementById('templatesModal');
-  const tb = document.getElementById('templateBuildModal');
-  tb.classList.remove('open');
-  tb.style.display = 'none';
   tmplItems = [];
   editingTemplateId = null;
-  tl.classList.add('open');
-  tl.style.display = 'flex';
+  switchModal('templateBuildModal', 'templatesModal');
   renderTemplatesList();
 }
 
@@ -2673,6 +2656,29 @@ function saveTemplate() {
   TDB.templates = templates;
   closeTemplateBuildModal();
   toast((editingTemplateId ? 'Template updated' : 'Template saved') + ': ' + name, 'success');
+}
+
+// ─── MODAL HELPERS ────────────────────────────────────────────────────────────
+const MODAL_IDS = ['itemModal','adjModal','driveModal','cartModal','templatesModal','templateBuildModal','saleModal','pdfModal'];
+
+function showModal(id) {
+  MODAL_IDS.forEach(mid => {
+    const el = document.getElementById(mid);
+    if (el) { el.style.display = 'none'; el.classList.remove('open'); }
+  });
+  const el = document.getElementById(id);
+  if (el) { el.style.display = 'flex'; el.classList.add('open'); }
+}
+
+function hideModal(id) {
+  const el = document.getElementById(id);
+  if (el) { el.style.display = 'none'; el.classList.remove('open'); }
+}
+
+function switchModal(hideId, showId) {
+  hideModal(hideId);
+  const el = document.getElementById(showId);
+  if (el) { el.style.display = 'flex'; el.classList.add('open'); }
 }
 
 // Close cart dropdown when clicking outside
