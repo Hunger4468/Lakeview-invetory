@@ -882,32 +882,44 @@ let adjItemId=null, scanItemId=null, adjType='in', adjCount=1, sortCol='name', s
 let html5QrScanner = null;
 
 // ─── VIEWS ────────────────────────────────────────────────────────────────────
+const VIEW_IDS = ['dashboard', 'scan', 'log', 'sales'];
+
 function switchView(v, btn) {
-  document.querySelectorAll('.view').forEach(el => {
-    el.classList.remove('active');
-    el.style.display = 'none';
+  // Explicitly hide every known view by ID
+  VIEW_IDS.forEach(id => {
+    const el = document.getElementById(id + 'View');
+    if (el) {
+      el.classList.remove('active');
+      el.style.cssText = 'display:none !important';
+    }
   });
+
+  // Show target view
+  const target = document.getElementById(v + 'View');
+  if (target) {
+    target.classList.add('active');
+    target.style.cssText = 'display:block !important';
+  }
+
+  // Update nav
   document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
-  const target = document.getElementById(v+'View');
-  target.classList.add('active');
-  target.style.display = 'block';
   if (btn) btn.classList.add('active');
 
-  // Stop scanners when leaving their views
-  if (v!=='scan') stopScanner();
-  if (v!=='sales') {
+  // Stop scanners
+  if (v !== 'scan') stopScanner();
+  if (v !== 'sales') {
     if (typeof stopSaleScanner === 'function') stopSaleScanner();
     if (typeof stopCartScanner === 'function') stopCartScanner();
   }
 
-  // Defer render until after browser paints the new view
+  // Render after paint
   requestAnimationFrame(() => {
-    setTimeout(() => {
-      if (v==='dashboard') { renderStats(); renderTable(); }
-      if (v==='log') renderLog();
-      if (v==='sales') setSalesRange('month');
-      if (v==='scan') initScanner();
-    }, 50);
+    requestAnimationFrame(() => {
+      if (v === 'dashboard') { renderStats(); renderTable(); }
+      else if (v === 'log') renderLog();
+      else if (v === 'sales') setSalesRange('month');
+      else if (v === 'scan') initScanner();
+    });
   });
 }
 
@@ -2455,31 +2467,33 @@ function loadTemplate(id) {
   const t = TDB.templates.find(t => t.id === id);
   if (!t) return;
   // Build cart from template using current inventory prices
-  cart = t.items.map(ti => {
+  const built = t.items.map(ti => {
     const inv = DB.items.find(i => i.id === ti.itemId);
     if (!inv) return null;
-    return {
-      itemId: ti.itemId,
-      name: inv.name,
-      barcode: inv.barcode||'',
-      qty: ti.qty,
-      priceEach: inv.price || 0,
-      cost: inv.cost || 0
-    };
+    return { itemId: ti.itemId, name: inv.name, barcode: inv.barcode||'', qty: ti.qty, priceEach: inv.price || 0, cost: inv.cost || 0 };
   }).filter(Boolean);
   closeTemplatesModal();
-  // Open cart if not already open
+  // Set cart before opening so openCartModal doesn't clear it
+  cart = built;
   if (!document.getElementById('cartModal').classList.contains('open')) {
-    openCartModal();
-    // Re-apply cart items since openCartModal clears it
-    const saved = [...cart];
-    setTimeout(() => {
-      cart = saved;
-      renderCart();
-    }, 50);
-  } else {
-    renderCart();
+    // Open cart manually without triggering focus/dropdown
+    document.getElementById('cartItemSearch').value = '';
+    document.getElementById('cartDropdown').style.display = 'none';
+    document.getElementById('cartScannerWrap').style.display = 'none';
+    document.getElementById('cartMethod').value = 'cash';
+    document.getElementById('cartDate').value = new Date().toISOString().slice(0,10);
+    document.getElementById('cartNotes').value = '';
+    document.getElementById('cartOos').value = '0';
+    document.getElementById('cartOosToggle').style.background = 'var(--border)';
+    document.getElementById('cartOosThumb').style.left = '2px';
+    document.getElementById('cartFriend').value = '0';
+    document.getElementById('cartFriendToggle').style.background = 'var(--border)';
+    document.getElementById('cartFriendThumb').style.left = '2px';
+    document.getElementById('cartModal').classList.add('open');
   }
+  renderCart();
+  // Hide dropdown in case it appeared
+  document.getElementById('cartDropdown').style.display = 'none';
   toast('Template loaded: ' + t.name, 'success');
 }
 
@@ -2607,11 +2621,10 @@ function removeFromTmpl(itemId) {
 
 function renderTmplItems() {
   const el = document.getElementById('tmplItemsList');
-  const empty = document.getElementById('tmplEmpty');
   if (!tmplItems.length) {
-    el.innerHTML = ''; el.appendChild(empty); empty.style.display = 'block'; return;
+    el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted);font-family:var(--font-mono);font-size:12px">No items added yet</div>';
+    return;
   }
-  empty.style.display = 'none';
   el.innerHTML = tmplItems.map(t => `
     <div class="tmpl-item-row">
       <div style="flex:1;min-width:0">
@@ -2650,10 +2663,27 @@ function saveTemplate() {
   toast((editingTemplateId ? 'Template updated' : 'Template saved') + ': ' + name, 'success');
 }
 
+// Close cart dropdown when clicking outside
+document.addEventListener('click', (e) => {
+  const dd = document.getElementById('cartDropdown');
+  const search = document.getElementById('cartItemSearch');
+  if (dd && search && !dd.contains(e.target) && e.target !== search) {
+    dd.style.display = 'none';
+  }
+  const tdd = document.getElementById('tmplDropdown');
+  const tsearch = document.getElementById('tmplItemSearch');
+  if (tdd && tsearch && !tdd.contains(e.target) && e.target !== tsearch) {
+    tdd.style.display = 'none';
+  }
+});
+
 // ─── INIT ─────────────────────────────────────────────────────────────────────
-// Ensure initial view is visible
-document.querySelectorAll('.view').forEach(el => el.style.display = 'none');
-document.getElementById('dashView').style.display = 'block';
+['scan','log','sales'].forEach(id => {
+  const el = document.getElementById(id + 'View');
+  if (el) el.style.cssText = 'display:none !important';
+});
+const dashEl = document.getElementById('dashView');
+if (dashEl) dashEl.style.cssText = 'display:block !important';
 renderStats(); renderTable();
 if(!DB.clientId) document.getElementById('setupBanner').style.display='flex';
 else { document.getElementById('syncNowBtn').style.display=''; initDrive(); }
