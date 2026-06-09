@@ -2758,19 +2758,21 @@ document.addEventListener('click', (e) => {
 });
 const dashEl = document.getElementById('dashView');
 if (dashEl) dashEl.style.cssText = 'display:block !important';
-renderStats(); renderTable();
-if(!DB.clientId) document.getElementById('setupBanner').style.display='flex';
-else { document.getElementById('syncNowBtn').style.display=''; initDrive(); }
+
+// Always render local data immediately — don't wait for Drive
+renderStats();
+renderTable();
+
+// Then init Drive in background
+if (!DB.clientId) {
+  document.getElementById('setupBanner').style.display = 'flex';
+} else {
+  document.getElementById('syncNowBtn').style.display = '';
+  initDrive();
+}
 
 // ─── PWA ──────────────────────────────────────────────────────────────────────
 let deferredInstallPrompt = null;
-
-if ('serviceWorker' in navigator) {
-  // Unregister any old service workers to prevent stale cache issues
-  navigator.serviceWorker.getRegistrations().then(registrations => {
-    registrations.forEach(reg => reg.unregister());
-  });
-}
 
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
