@@ -2428,10 +2428,14 @@ let templatesFromCart = false;
 function openTemplatesModal(fromCart=false) {
   templatesFromCart = fromCart;
   renderTemplatesList();
-  document.getElementById('templatesModal').classList.add('open');
+  const el = document.getElementById('templatesModal');
+  el.classList.add('open');
+  el.style.display = 'flex';
 }
 function closeTemplatesModal() {
-  document.getElementById('templatesModal').classList.remove('open');
+  const el = document.getElementById('templatesModal');
+  el.classList.remove('open');
+  el.style.display = 'none';
 }
 
 function renderTemplatesList() {
@@ -2524,18 +2528,26 @@ function openTemplateBuildModal(editId=null) {
     }
   }
   renderTmplItems();
+
   // Close templates list, open builder
-  document.getElementById('templatesModal').classList.remove('open');
-  document.getElementById('templateBuildModal').classList.add('open');
+  const tl = document.getElementById('templatesModal');
+  const tb = document.getElementById('templateBuildModal');
+  tl.classList.remove('open');
+  tl.style.display = 'none';
+  tb.classList.add('open');
+  tb.style.display = 'flex';
   setTimeout(() => document.getElementById('tmplName').focus(), 120);
 }
 
 function closeTemplateBuildModal() {
-  document.getElementById('templateBuildModal').classList.remove('open');
+  const tl = document.getElementById('templatesModal');
+  const tb = document.getElementById('templateBuildModal');
+  tb.classList.remove('open');
+  tb.style.display = 'none';
   tmplItems = [];
   editingTemplateId = null;
-  // Reopen templates list
-  document.getElementById('templatesModal').classList.add('open');
+  tl.classList.add('open');
+  tl.style.display = 'flex';
   renderTemplatesList();
 }
 
