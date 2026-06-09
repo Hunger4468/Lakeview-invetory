@@ -1,21 +1,19 @@
-const CACHE = 'lakeview-v1';
-const ASSETS = [
-  './',
-  './index.html',
+const CACHE = 'lakeview-v4';
+
+// Only cache third-party assets, never the HTML itself
+const PRECACHE = [
   'https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap',
   'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js',
 ];
 
-// Install: cache core assets
 self.addEventListener('install', e => {
   e.waitUntil(
-    caches.open(CACHE).then(cache => {
-      return Promise.allSettled(ASSETS.map(url => cache.add(url).catch(() => {})));
-    }).then(() => self.skipWaiting())
+    caches.open(CACHE).then(cache =>
+      Promise.allSettled(PRECACHE.map(url => cache.add(url).catch(() => {})))
+    ).then(() => self.skipWaiting())
   );
 });
 
-// Activate: clear old caches
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(keys =>
@@ -24,33 +22,30 @@ self.addEventListener('activate', e => {
   );
 });
 
-// Fetch: cache-first for local assets, network-first for API calls
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
 
-  // Never intercept Google APIs, Drive, or OAuth calls
-  if (url.hostname.includes('googleapis.com') ||
-      url.hostname.includes('accounts.google.com') ||
-      url.hostname.includes('googleusercontent.com')) {
-    return;
+  // Never intercept Google APIs or the HTML file itself
+  if (
+    url.hostname.includes('googleapis.com') ||
+    url.hostname.includes('accounts.google.com') ||
+    url.hostname.includes('googleusercontent.com') ||
+    url.hostname.includes('hunger4468.github.io') ||
+    e.request.mode === 'navigate'
+  ) {
+    return; // Let browser handle it normally
   }
 
-  // Cache-first for same-origin and CDN assets
+  // Cache-first for third-party assets only (fonts, libraries)
   e.respondWith(
     caches.match(e.request).then(cached => {
       if (cached) return cached;
       return fetch(e.request).then(response => {
-        // Cache successful GET responses
         if (e.request.method === 'GET' && response.status === 200) {
           const clone = response.clone();
           caches.open(CACHE).then(cache => cache.put(e.request, clone));
         }
         return response;
-      }).catch(() => {
-        // Offline fallback for navigation requests
-        if (e.request.mode === 'navigate') {
-          return caches.match('./index.html') || caches.match('./');
-        }
       });
     })
   );
