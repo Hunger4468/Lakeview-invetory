@@ -370,7 +370,7 @@
 <body>
 
 <header>
-  <div class="logo">LAKEVIEW <span>FIREARMS</span></div>
+  <div class="logo">LAKEVIEW <span>FIREARMS</span> <small id="versionTag" style="font-family:var(--font-mono);font-size:9px;color:var(--muted);letter-spacing:1px;vertical-align:super"></small></div>
   <nav>
     <button class="active" onclick="switchView('dashboard', this)">Inventory</button>
     <button onclick="switchView('scan', this)">📷 Scan</button>
@@ -378,6 +378,7 @@
     <button onclick="switchView('sales', this)">$ Sales</button>
   </nav>
   <div class="header-right">
+    <div class="sync-pill" id="undoBtn" onclick="undoLast()" style="display:none" title="Undo last action">↩ <span>Undo</span></div>
     <div class="sync-pill" id="syncPill" onclick="openDriveModal()" title="Google Drive Sync">
       <div class="dot"></div>
       <span id="syncLabel">Drive</span>
@@ -401,6 +402,10 @@
     <button class="btn" onclick="exportCSV()">⬇ CSV</button>
     <button class="btn" onclick="document.getElementById('pdfFileInput').click()">📄 Import PDF</button>
     <button class="btn" id="archiveToggleBtn" onclick="toggleArchivedView()">🗄 Archived</button>
+    <button class="btn" id="groupToggleBtn" onclick="toggleGroupView()">📂 Group</button>
+    <button class="btn" onclick="openReceiveModal()">📥 Receive</button>
+    <button class="btn" onclick="openCountModal()">🔢 Count</button>
+    <button class="btn" onclick="openReorderModal()">🔄 Reorder List</button>
     <input type="file" id="pdfFileInput" accept=".pdf" style="display:none" onchange="handlePdfUpload(event)">
     <button class="btn drive" onclick="manualSync()" id="syncNowBtn" style="display:none">↻ Sync</button>
     <button class="btn primary" onclick="openAddModal()">+ Add Item</button>
@@ -498,6 +503,12 @@
       <h3>PAYMENT METHOD</h3>
       <div id="paymentSplit" style="display:flex;flex-direction:column;gap:10px;margin-top:8px"></div>
     </div>
+  </div>
+
+  <!-- Category profit -->
+  <div class="chart-wrap">
+    <h3>PROFIT BY CATEGORY</h3>
+    <div id="catProfitChart"></div>
   </div>
 
   <!-- Sales log -->
@@ -859,10 +870,97 @@
   </div>
 </div>
 
+
+<!-- RECEIVE MODAL -->
+<div class="modal-overlay" id="receiveModal">
+  <div class="modal" style="max-width:560px">
+    <button class="close-btn" onclick="closeReceiveModal()">✕</button>
+    <h2>📥 RECEIVE SHIPMENT</h2>
+    <p style="font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-bottom:12px">Scan each item as you unpack. Quantities are applied when you commit.</p>
+    <div style="display:flex;gap:8px;margin-bottom:10px;position:relative">
+      <input id="rcvSearch" placeholder="Search or scan item…" autocomplete="off" oninput="filterRcvItems()" onfocus="showRcvDropdown()"
+        style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--font-body);font-size:14px;padding:10px 13px;border-radius:6px;outline:none;">
+      <button class="btn" id="rcvScanBtn" onclick="toggleRcvScanner()" style="padding:10px 12px;font-size:16px">📷</button>
+      <div id="rcvDropdown" style="display:none;position:absolute;left:0;right:52px;top:100%;background:var(--surface2);border:1px solid var(--accent);border-top:none;border-radius:0 0 6px 6px;max-height:160px;overflow-y:auto;z-index:300;box-shadow:0 8px 24px rgba(0,0,0,0.4)"></div>
+    </div>
+    <div id="rcvScannerWrap" style="display:none;margin-bottom:10px">
+      <div id="rcv-qr-reader" style="border-radius:8px;overflow:hidden;border:2px solid var(--accent)"></div>
+      <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);text-align:center;margin-top:6px;letter-spacing:1px">SCANNER STAYS OPEN — SCAN EVERYTHING IN THE BOX</div>
+    </div>
+    <div id="rcvList" style="max-height:260px;overflow-y:auto;margin-bottom:8px">
+      <div style="text-align:center;padding:24px;color:var(--muted);font-family:var(--font-mono);font-size:12px" id="rcvEmpty">Nothing received yet</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn danger" onclick="rcvPending={};renderRcvList()">Clear</button>
+      <div style="flex:1"></div>
+      <button class="btn" onclick="closeReceiveModal()">Cancel</button>
+      <button class="btn primary" onclick="commitReceive()">✓ Commit All</button>
+    </div>
+  </div>
+</div>
+
+<!-- COUNT MODAL -->
+<div class="modal-overlay" id="countModal">
+  <div class="modal" style="max-width:600px">
+    <button class="close-btn" onclick="closeCountModal()">✕</button>
+    <h2>🔢 INVENTORY COUNT</h2>
+    <div id="countPhase1">
+      <p style="font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-bottom:12px">Walk the store and scan every item. Each scan adds 1 to the counted total. When done, review discrepancies.</p>
+      <div style="display:flex;gap:8px;margin-bottom:10px;position:relative">
+        <input id="cntSearch" placeholder="Search or scan item…" autocomplete="off" oninput="filterCntItems()" onfocus="showCntDropdown()"
+          style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--font-body);font-size:14px;padding:10px 13px;border-radius:6px;outline:none;">
+        <button class="btn" id="cntScanBtn" onclick="toggleCntScanner()" style="padding:10px 12px;font-size:16px">📷</button>
+        <div id="cntDropdown" style="display:none;position:absolute;left:0;right:52px;top:100%;background:var(--surface2);border:1px solid var(--accent);border-top:none;border-radius:0 0 6px 6px;max-height:160px;overflow-y:auto;z-index:300;box-shadow:0 8px 24px rgba(0,0,0,0.4)"></div>
+      </div>
+      <div id="cntScannerWrap" style="display:none;margin-bottom:10px">
+        <div id="cnt-qr-reader" style="border-radius:8px;overflow:hidden;border:2px solid var(--accent)"></div>
+      </div>
+      <div id="cntList" style="max-height:240px;overflow-y:auto;margin-bottom:8px">
+        <div style="text-align:center;padding:24px;color:var(--muted);font-family:var(--font-mono);font-size:12px" id="cntEmpty">Nothing counted yet</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn danger" onclick="cntCounts={};renderCntList()">Reset Count</button>
+        <div style="flex:1"></div>
+        <button class="btn" onclick="closeCountModal()">Cancel</button>
+        <button class="btn primary" onclick="showCountReview()">Review Discrepancies →</button>
+      </div>
+    </div>
+    <div id="countPhase2" style="display:none">
+      <p style="font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-bottom:12px">Expected vs counted. Apply corrections to update inventory to match your physical count.</p>
+      <div id="cntReview" style="max-height:300px;overflow-y:auto;margin-bottom:8px"></div>
+      <div class="modal-footer">
+        <button class="btn" onclick="document.getElementById('countPhase2').style.display='none';document.getElementById('countPhase1').style.display='block'">← Back</button>
+        <div style="flex:1"></div>
+        <button class="btn" onclick="closeCountModal()">Cancel</button>
+        <button class="btn primary" onclick="applyCountCorrections()">✓ Apply Corrections</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- REORDER MODAL -->
+<div class="modal-overlay" id="reorderModal">
+  <div class="modal" style="max-width:560px">
+    <button class="close-btn" onclick="hideModal('reorderModal')">✕</button>
+    <h2>🔄 REORDER LIST</h2>
+    <p style="font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-bottom:12px">Items at or below their low-stock alert level (archived items excluded).</p>
+    <div id="reorderList" style="max-height:320px;overflow-y:auto;margin-bottom:12px"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="copyReorderList()">📋 Copy as Text</button>
+      <button class="btn" onclick="exportReorderCSV()">⬇ CSV</button>
+      <div style="flex:1"></div>
+      <button class="btn primary" onclick="hideModal('reorderModal')">Done</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
 // ─── GLOBAL ERROR HANDLER ─────────────────────────────────────────────────────
+const APP_VERSION = '2.1.0';
+console.log('Lakeview Inventory v' + APP_VERSION);
+
 window.onerror = function(msg, src, line, col, err) {
   const banner = document.createElement('div');
   banner.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#c0392b;color:#fff;font-family:monospace;font-size:12px;padding:10px 16px;z-index:9999;word-break:break-all';
@@ -1062,6 +1160,22 @@ function toggleArchivedView() {
   renderTable();
 }
 
+let groupByCategory = false;
+let collapsedCats = new Set();
+
+function toggleGroupView() {
+  groupByCategory = !groupByCategory;
+  const btn = document.getElementById('groupToggleBtn');
+  if (btn) btn.classList.toggle('primary', groupByCategory);
+  renderTable();
+}
+
+function toggleCatCollapse(cat) {
+  if (collapsedCats.has(cat)) collapsedCats.delete(cat);
+  else collapsedCats.add(cat);
+  renderTable();
+}
+
 function renderTable() {
   const q = (document.getElementById('searchBox').value||'').toLowerCase();
   let items = DB.items.filter(i =>
@@ -1083,28 +1197,61 @@ function renderTable() {
       : '<tr><td colspan="7"><div class="empty"><div class="icon">📦</div>No items found</div></td></tr>';
     return;
   }
-  body.innerHTML = items.map(item => {
-    const low=item.lowStock||2;
-    const qc=item.qty===0?'qty-low':item.qty<=low?'qty-warn':'qty-ok';
-    return `<tr ${item.archived?'style="opacity:0.65"':''}>
-      <td><strong>${esc(item.name)}</strong>${item.archived?' <span style="font-family:var(--font-mono);font-size:9px;background:rgba(255,92,92,0.15);color:var(--red);border:1px solid rgba(255,92,92,0.3);padding:2px 6px;border-radius:3px;letter-spacing:1px">DO NOT REORDER</span>':''}${item.notes?`<br><span style="font-size:11px;color:var(--muted)">${esc(item.notes)}</span>`:''}</td>
-      <td class="hide-mobile">${esc(item.category||'—')}</td>
-      <td class="barcode-cell hide-mobile">${esc(item.barcode||'—')}</td>
-      <td><span class="qty-badge ${qc}">${item.qty}</span></td>
-      <td class="hide-mobile">${item.cost?'$'+Number(item.cost).toFixed(2):'—'}</td>
-      <td class="hide-mobile">${item.price?'$'+Number(item.price).toFixed(2):'—'}</td>
-      <td><div class="action-btns">
-        ${item.archived
-          ? `<button class="icon-btn" title="Restore to active inventory" onclick="unarchiveItem('${item.id}')">↩</button>
-             <button class="icon-btn del" title="Delete permanently" onclick="deleteItem('${item.id}')">✕</button>`
-          : `<button class="icon-btn" title="Adjust qty" onclick="openAdjModal('${item.id}')">±</button>
-             <button class="icon-btn" title="Edit" onclick="openEditModal('${item.id}')">✎</button>
-             <button class="icon-btn" title="Archive — do not reorder" onclick="archiveItem('${item.id}')">🗄</button>
-             <button class="icon-btn del" title="Delete" onclick="deleteItem('${item.id}')">✕</button>`}
-      </div></td>
-    </tr>`;
-  }).join('');
+
+  if (groupByCategory) {
+    // Group items by category
+    const groups = {};
+    items.forEach(i => {
+      const cat = i.category || 'Uncategorized';
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(i);
+    });
+    const sortedCats = Object.keys(groups).sort((a,b) => a.localeCompare(b));
+    body.innerHTML = sortedCats.map(cat => {
+      const rows = groups[cat];
+      const totalQty = rows.reduce((s,i) => s + i.qty, 0);
+      const totalVal = rows.reduce((s,i) => s + i.qty * (i.cost||0), 0);
+      const lowCount = rows.filter(i => i.qty <= (i.lowStock||2)).length;
+      const collapsed = collapsedCats.has(cat);
+      const header = `<tr style="cursor:pointer;background:var(--surface2)" onclick="toggleCatCollapse('${esc(cat).replace(/'/g,"\\'")}')">
+        <td colspan="7" style="padding:10px 16px;border-top:2px solid var(--accent)">
+          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+            <span style="font-family:var(--font-mono);font-size:10px;color:var(--muted)">${collapsed?'▶':'▼'}</span>
+            <strong style="font-family:var(--font-display);font-size:17px;letter-spacing:1.5px;color:var(--accent)">${esc(cat.toUpperCase())}</strong>
+            <span style="font-family:var(--font-mono);font-size:11px;color:var(--muted)">${rows.length} item${rows.length!==1?'s':''} · ${totalQty} units · $${totalVal.toFixed(0)} value${lowCount?` · <span style="color:var(--red)">${lowCount} low</span>`:''}</span>
+          </div>
+        </td>
+      </tr>`;
+      return header + (collapsed ? '' : rows.map(item => itemRowHTML(item)).join(''));
+    }).join('');
+    updateCatList(); renderStats();
+    return;
+  }
+
+  body.innerHTML = items.map(item => itemRowHTML(item)).join('');
   updateCatList(); renderStats();
+}
+
+function itemRowHTML(item) {
+  const low=item.lowStock||2;
+  const qc=item.qty===0?'qty-low':item.qty<=low?'qty-warn':'qty-ok';
+  return `<tr ${item.archived?'style="opacity:0.65"':''}>
+    <td><strong>${esc(item.name)}</strong>${item.archived?' <span style="font-family:var(--font-mono);font-size:9px;background:rgba(255,92,92,0.15);color:var(--red);border:1px solid rgba(255,92,92,0.3);padding:2px 6px;border-radius:3px;letter-spacing:1px">DO NOT REORDER</span>':''}${item.notes?`<br><span style="font-size:11px;color:var(--muted)">${esc(item.notes)}</span>`:''}</td>
+    <td class="hide-mobile">${esc(item.category||'—')}</td>
+    <td class="barcode-cell hide-mobile">${esc(item.barcode||'—')}</td>
+    <td><span class="qty-badge ${qc}">${item.qty}</span></td>
+    <td class="hide-mobile">${item.cost?'$'+Number(item.cost).toFixed(2):'—'}</td>
+    <td class="hide-mobile">${item.price?'$'+Number(item.price).toFixed(2):'—'}</td>
+    <td><div class="action-btns">
+      ${item.archived
+        ? `<button class="icon-btn" title="Restore to active inventory" onclick="unarchiveItem('${item.id}')">↩</button>
+           <button class="icon-btn del" title="Delete permanently" onclick="deleteItem('${item.id}')">✕</button>`
+        : `<button class="icon-btn" title="Adjust qty" onclick="openAdjModal('${item.id}')">±</button>
+           <button class="icon-btn" title="Edit" onclick="openEditModal('${item.id}')">✎</button>
+           <button class="icon-btn" title="Archive — do not reorder" onclick="archiveItem('${item.id}')">🗄</button>
+           <button class="icon-btn del" title="Delete" onclick="deleteItem('${item.id}')">✕</button>`}
+    </div></td>
+  </tr>`;
 }
 
 function archiveItem(id) {
@@ -1112,6 +1259,7 @@ function archiveItem(id) {
   const idx = items.findIndex(i => i.id === id);
   if (idx === -1) return;
   if (!confirm('Archive "' + items[idx].name + '"?\n\nIt will be hidden from inventory and flagged as DO NOT REORDER. PDF imports will skip it.')) return;
+  pushUndo('Archive item');
   items[idx].archived = true;
   DB.items = items;
   renderTable();
@@ -1163,7 +1311,7 @@ function saveItem() {
   DB.items=items; closeModal(); renderTable();
   toast(editId?'Item updated':'Item added','success');
 }
-function deleteItem(id) { if(!confirm('Delete this item?')) return; DB.items=DB.items.filter(i=>i.id!==id); renderTable(); toast('Item deleted'); }
+function deleteItem(id) { if(!confirm('Delete this item?')) return; pushUndo('Item delete'); DB.items=DB.items.filter(i=>i.id!==id); renderTable(); toast('Item deleted'); }
 function closeModal() { hideModal('itemModal'); }
 
 // ─── ADJ MODAL ────────────────────────────────────────────────────────────────
@@ -1175,6 +1323,7 @@ function openAdjModal(id) {
   showModal('adjModal');
 }
 function applyAdjModal() {
+  pushUndo('Qty adjustment');
   const items=DB.items; const idx=items.findIndex(i=>i.id===adjItemId); if(idx===-1) return;
   const dir=document.getElementById('adjDir').value;
   const amt=parseInt(document.getElementById('adjAmount').value)||0;
@@ -1312,11 +1461,29 @@ async function syncFromDrive() {
     toast('Synced with Google Drive','success');
   } catch(e){console.error('Sync error:',e);updateSyncUI('error');toast('Sync failed','error');}
 }
-async function saveToDrive() {
+async function saveToDrive(force=false) {
   try { if(!(typeof gapi !== 'undefined' && gapi.client && gapi.client.getToken())) return; } catch(e) { return; }
-  const payload=JSON.stringify({items:DB.items,log:DB.log,sales:SDB.sales,templates:TDB.templates,updated:new Date().toISOString()});
+  if (!navigator.onLine) { localStorage.setItem('lf_pending_sync','1'); updateSyncUI('error'); return; }
   try {
     const fileId=await getDriveFileId();
+
+    // ── CONFLICT CHECK: is the remote file newer than our last sync? ──
+    if (fileId && !force && DB.lastSync) {
+      try {
+        const remote = await gapi.client.request({path:`https://www.googleapis.com/drive/v3/files/${fileId}`,method:'GET',params:{alt:'media'}});
+        const rdata = typeof remote.result==='string'?JSON.parse(remote.result):remote.result;
+        if (rdata.updated && new Date(rdata.updated) > new Date(DB.lastSync)) {
+          updateSyncUI('error');
+          if (confirm('⚠ Google Drive has NEWER data than this device (saved from another device).\n\nOK = Pull the newer Drive data (recommended)\nCancel = Overwrite Drive with this device\u2019s data')) {
+            await syncFromDrive();
+            return;
+          }
+          // else fall through and overwrite (force)
+        }
+      } catch(e) { console.warn('Conflict check skipped:', e); }
+    }
+
+    const payload=JSON.stringify({items:DB.items,log:DB.log,sales:SDB.sales,templates:TDB.templates,updated:new Date().toISOString(),version:APP_VERSION});
     if(fileId) {
       await gapi.client.request({path:`https://www.googleapis.com/upload/drive/v3/files/${fileId}`,method:'PATCH',params:{uploadType:'media'},headers:{'Content-Type':'application/json'},body:payload});
     } else {
@@ -1325,8 +1492,43 @@ async function saveToDrive() {
       await gapi.client.request({path:`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}`,method:'PATCH',params:{uploadType:'media'},headers:{'Content-Type':'application/json'},body:payload});
     }
     DB.lastSync=new Date().toISOString(); updateSyncUI('connected');
+    localStorage.removeItem('lf_pending_sync');
+    runDailyBackup(payload);
   } catch(e){console.error('Save error:',e);updateSyncUI('error');}
 }
+
+// ── DAILY BACKUP: keep a rolling 7 days of snapshots in Drive ──
+async function runDailyBackup(payload) {
+  try {
+    const today = new Date().toISOString().slice(0,10);
+    if (localStorage.getItem('lf_last_backup') === today) return;
+    const backupName = 'lakeview-backup-' + today + '.json';
+    // Create today's backup
+    const meta = await gapi.client.request({path:'https://www.googleapis.com/drive/v3/files',method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:backupName,mimeType:'application/json'})});
+    await gapi.client.request({path:`https://www.googleapis.com/upload/drive/v3/files/${meta.result.id}`,method:'PATCH',params:{uploadType:'media'},headers:{'Content-Type':'application/json'},body:payload});
+    localStorage.setItem('lf_last_backup', today);
+    // Prune backups older than 7 days
+    const res = await gapi.client.request({path:'https://www.googleapis.com/drive/v3/files',method:'GET',params:{q:"name contains 'lakeview-backup-' and trashed=false",spaces:'drive',fields:'files(id,name)'}});
+    const files = res.result.files || [];
+    const cutoff = new Date(Date.now() - 7*24*60*60*1000).toISOString().slice(0,10);
+    for (const f of files) {
+      const m = f.name.match(/lakeview-backup-(\d{4}-\d{2}-\d{2})/);
+      if (m && m[1] < cutoff) {
+        await gapi.client.request({path:`https://www.googleapis.com/drive/v3/files/${f.id}`,method:'DELETE'}).catch(()=>{});
+      }
+    }
+    console.log('Daily backup created:', backupName);
+  } catch(e) { console.warn('Backup failed:', e); }
+}
+
+// ── OFFLINE QUEUE: push pending changes when connection returns ──
+window.addEventListener('online', () => {
+  if (localStorage.getItem('lf_pending_sync')) {
+    toast('Back online — syncing…');
+    saveToDrive();
+  }
+});
+window.addEventListener('offline', () => updateSyncUI('error'));
 function scheduleSyncSave() {
   try { if(!(typeof gapi !== 'undefined' && gapi.client && gapi.client.getToken())) return; } catch(e) { return; }
   clearTimeout(syncTimeout); syncTimeout=setTimeout(()=>saveToDrive(),3000);
@@ -1790,6 +1992,7 @@ function showPdfModal(manualMode=false) {
 }
 
 function importPdfRows() {
+  pushUndo('PDF import');
   // If manual mode, build pdfParsed from column mapping first
   if (!pdfParsed.length && pdfRawRows.length) {
     const maxCols = Math.max(...pdfRawRows.map(r=>r.length));
@@ -2037,6 +2240,7 @@ function calcSaleProfit() {
 }
 
 function confirmSale() {
+  pushUndo('Sale');
   const id = document.getElementById('saleItemId').value;
   const qty = parseInt(document.getElementById('saleQty').value) || 0;
   const priceEach = parseFloat(document.getElementById('salePriceEach').value) || 0;
@@ -2190,6 +2394,30 @@ function renderSalesView() {
       <div class="bs-name">${esc(name)}</div>
       <div class="bs-stats">$${d.revenue.toFixed(2)} rev<br>${d.qty} sold</div>
     </div>`).join('') : '<div style="padding:16px 20px;color:var(--muted);font-family:var(--font-mono);font-size:12px">No sales yet</div>';
+
+  // Category profit
+  const catProfit = {};
+  sales.forEach(s => {
+    const item = DB.items.find(i => i.id === s.itemId);
+    const cat = (item && item.category) ? item.category : 'Uncategorized';
+    if (!catProfit[cat]) catProfit[cat] = { revenue: 0, profit: 0, count: 0 };
+    catProfit[cat].revenue += s.revenue;
+    catProfit[cat].profit += (s.profit||0);
+    catProfit[cat].count += s.qty;
+  });
+  const catEntries = Object.entries(catProfit).sort((a,b) => b[1].profit - a[1].profit);
+  const maxCatProfit = Math.max(...catEntries.map(([,d]) => Math.abs(d.profit)), 1);
+  document.getElementById('catProfitChart').innerHTML = catEntries.length ? catEntries.map(([cat, d]) => `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+      <div style="font-family:var(--font-mono);font-size:11px;min-width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(cat)}</div>
+      <div style="flex:1;background:var(--surface2);border-radius:3px;height:14px;overflow:hidden">
+        <div style="height:100%;background:${d.profit>=0?'var(--green)':'var(--red)'};border-radius:3px;width:${(Math.abs(d.profit)/maxCatProfit*100).toFixed(1)}%"></div>
+      </div>
+      <div style="font-family:var(--font-mono);font-size:11px;min-width:130px;text-align:right">
+        <span style="color:${d.profit>=0?'var(--green)':'var(--red)'};font-weight:700">$${d.profit.toFixed(0)}</span>
+        <span style="color:var(--muted)"> / $${d.revenue.toFixed(0)} rev · ${d.count} sold</span>
+      </div>
+    </div>`).join('') : '<div style="color:var(--muted);font-family:var(--font-mono);font-size:12px">No sales in this period</div>';
 
   // Sales log
   document.getElementById('salesList').innerHTML = sales.length ? sales.map(s => {
@@ -2411,6 +2639,7 @@ function updateCartTotals() {
 
 function checkoutCart() {
   if (!cart.length) { toast('Cart is empty', 'error'); return; }
+  pushUndo('Cart checkout');
   const method = document.getElementById('cartMethod').value;
   const date = document.getElementById('cartDate').value;
   const notes = document.getElementById('cartNotes').value.trim();
@@ -2747,8 +2976,300 @@ function saveTemplate() {
   toast((editingTemplateId ? 'Template updated' : 'Template saved') + ': ' + name, 'success');
 }
 
+
+// ─── UNDO SYSTEM ──────────────────────────────────────────────────────────────
+const UNDO_LIMIT = 10;
+let undoStack = [];
+
+function pushUndo(label) {
+  undoStack.push({
+    label,
+    ts: Date.now(),
+    items: JSON.stringify(DB.items),
+    sales: localStorage.getItem('lf_sales') || '[]',
+    log: localStorage.getItem('lf_log') || '[]'
+  });
+  if (undoStack.length > UNDO_LIMIT) undoStack.shift();
+  updateUndoBtn();
+}
+
+function undoLast() {
+  const snap = undoStack.pop();
+  if (!snap) { toast('Nothing to undo', 'error'); return; }
+  localStorage.setItem('lf_items', snap.items);
+  localStorage.setItem('lf_sales', snap.sales);
+  localStorage.setItem('lf_log', snap.log);
+  scheduleSyncSave();
+  renderTable(); renderStats();
+  try { if (document.getElementById('salesView').style.display !== 'none') renderSalesView(); } catch(e) {}
+  try { if (document.getElementById('logView').style.display !== 'none') renderLog(); } catch(e) {}
+  updateUndoBtn();
+  toast('Undone: ' + snap.label, 'success');
+}
+
+function updateUndoBtn() {
+  const btn = document.getElementById('undoBtn');
+  if (!btn) return;
+  btn.style.display = undoStack.length ? 'flex' : 'none';
+  btn.title = undoStack.length ? 'Undo: ' + undoStack[undoStack.length-1].label : '';
+}
+
+
+// ─── RECEIVE MODE ─────────────────────────────────────────────────────────────
+let rcvPending = {}; // itemId -> count
+let rcvScannerInstance = null;
+
+function openReceiveModal() {
+  rcvPending = {};
+  document.getElementById('rcvSearch').value = '';
+  document.getElementById('rcvDropdown').style.display = 'none';
+  document.getElementById('rcvScannerWrap').style.display = 'none';
+  renderRcvList();
+  showModal('receiveModal');
+}
+function closeReceiveModal() { stopRcvScanner(); hideModal('receiveModal'); }
+
+function filterRcvItems() { rcvShowDD(document.getElementById('rcvSearch').value.toLowerCase()); }
+function showRcvDropdown() { rcvShowDD(document.getElementById('rcvSearch').value.toLowerCase()); }
+function rcvShowDD(q) {
+  const items = DB.items.filter(i => !i.archived && (!q || i.name.toLowerCase().includes(q) || (i.barcode||'').toLowerCase().includes(q)));
+  const dd = document.getElementById('rcvDropdown');
+  dd.innerHTML = items.slice(0,12).map(i =>
+    `<div style="padding:9px 14px;cursor:pointer;border-bottom:1px solid var(--border)" onmousedown="rcvAdd('${i.id}')" onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background=''">
+      <div style="font-size:13px;font-weight:600">${esc(i.name)}</div>
+      <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted)">Stock: ${i.qty}${i.barcode?' · '+i.barcode:''}</div>
+    </div>`).join('') || '<div style="padding:10px 14px;font-family:var(--font-mono);font-size:11px;color:var(--muted)">No items found</div>';
+  dd.style.display = 'block';
+}
+function rcvAdd(itemId) {
+  document.getElementById('rcvDropdown').style.display = 'none';
+  document.getElementById('rcvSearch').value = '';
+  rcvPending[itemId] = (rcvPending[itemId]||0) + 1;
+  renderRcvList();
+  const item = DB.items.find(i=>i.id===itemId);
+  if (item) toast('+1 ' + item.name, 'success');
+}
+function rcvAdjust(itemId, d) {
+  rcvPending[itemId] = Math.max(0, (rcvPending[itemId]||0) + d);
+  if (rcvPending[itemId] === 0) delete rcvPending[itemId];
+  renderRcvList();
+}
+function renderRcvList() {
+  const el = document.getElementById('rcvList');
+  const ids = Object.keys(rcvPending);
+  if (!ids.length) { el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted);font-family:var(--font-mono);font-size:12px">Nothing received yet</div>'; return; }
+  el.innerHTML = ids.map(id => {
+    const item = DB.items.find(i=>i.id===id);
+    if (!item) return '';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;margin-bottom:6px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(item.name)}</div>
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted)">Current: ${item.qty} → New: ${item.qty + rcvPending[id]}</div>
+      </div>
+      <div class="cart-qty-ctrl">
+        <button class="cart-qty-btn" onclick="rcvAdjust('${id}',-1)">−</button>
+        <div class="cart-qty-num">+${rcvPending[id]}</div>
+        <button class="cart-qty-btn" onclick="rcvAdjust('${id}',1)">+</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function commitReceive() {
+  const ids = Object.keys(rcvPending);
+  if (!ids.length) { toast('Nothing to commit', 'error'); return; }
+  pushUndo('Receive shipment');
+  const items = DB.items;
+  let total = 0;
+  ids.forEach(id => {
+    const idx = items.findIndex(i=>i.id===id);
+    if (idx !== -1) { items[idx].qty += rcvPending[id]; total += rcvPending[id]; addLog(items[idx], 'in', rcvPending[id]); }
+  });
+  DB.items = items;
+  closeReceiveModal();
+  renderTable(); renderStats();
+  toast(total + ' units received across ' + ids.length + ' items', 'success');
+}
+function toggleRcvScanner() {
+  if (rcvScannerInstance) { stopRcvScanner(); return; }
+  document.getElementById('rcvScannerWrap').style.display = 'block';
+  document.getElementById('rcvScanBtn').textContent = '⏹';
+  rcvScannerInstance = new Html5QrcodeScanner('rcv-qr-reader', { fps:10, qrbox:{width:280,height:100}, rememberLastUsedCamera:true, supportedScanTypes:[Html5QrcodeScanType.SCAN_TYPE_CAMERA] }, false);
+  let lastCode=null, lastTime=0;
+  rcvScannerInstance.render(code => {
+    const now=Date.now();
+    if (code===lastCode && now-lastTime<1500) return;
+    lastCode=code; lastTime=now;
+    const item = DB.items.find(i => i.barcode === code && !i.archived);
+    if (!item) { toast('Not found: ' + code, 'error'); return; }
+    rcvAdd(item.id);
+  }, ()=>{});
+}
+function stopRcvScanner() {
+  if (rcvScannerInstance) { try{rcvScannerInstance.clear();}catch{} rcvScannerInstance=null; }
+  const w = document.getElementById('rcvScannerWrap'); if (w) w.style.display='none';
+  const b = document.getElementById('rcvScanBtn'); if (b) b.textContent='📷';
+}
+
+// ─── COUNT MODE ───────────────────────────────────────────────────────────────
+let cntCounts = {}; // itemId -> counted qty
+let cntScannerInstance = null;
+
+function openCountModal() {
+  cntCounts = {};
+  document.getElementById('cntSearch').value = '';
+  document.getElementById('cntDropdown').style.display = 'none';
+  document.getElementById('cntScannerWrap').style.display = 'none';
+  document.getElementById('countPhase1').style.display = 'block';
+  document.getElementById('countPhase2').style.display = 'none';
+  renderCntList();
+  showModal('countModal');
+}
+function closeCountModal() { stopCntScanner(); hideModal('countModal'); }
+
+function filterCntItems() { cntShowDD(document.getElementById('cntSearch').value.toLowerCase()); }
+function showCntDropdown() { cntShowDD(document.getElementById('cntSearch').value.toLowerCase()); }
+function cntShowDD(q) {
+  const items = DB.items.filter(i => !i.archived && (!q || i.name.toLowerCase().includes(q) || (i.barcode||'').toLowerCase().includes(q)));
+  const dd = document.getElementById('cntDropdown');
+  dd.innerHTML = items.slice(0,12).map(i =>
+    `<div style="padding:9px 14px;cursor:pointer;border-bottom:1px solid var(--border)" onmousedown="cntAdd('${i.id}')" onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background=''">
+      <div style="font-size:13px;font-weight:600">${esc(i.name)}</div>
+      <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted)">Expected: ${i.qty}${i.barcode?' · '+i.barcode:''}</div>
+    </div>`).join('') || '<div style="padding:10px 14px;font-family:var(--font-mono);font-size:11px;color:var(--muted)">No items found</div>';
+  dd.style.display = 'block';
+}
+function cntAdd(itemId) {
+  document.getElementById('cntDropdown').style.display = 'none';
+  document.getElementById('cntSearch').value = '';
+  cntCounts[itemId] = (cntCounts[itemId]||0) + 1;
+  renderCntList();
+}
+function cntAdjust(itemId, d) {
+  cntCounts[itemId] = Math.max(0, (cntCounts[itemId]||0) + d);
+  renderCntList();
+}
+function renderCntList() {
+  const el = document.getElementById('cntList');
+  const ids = Object.keys(cntCounts);
+  if (!ids.length) { el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted);font-family:var(--font-mono);font-size:12px">Nothing counted yet</div>'; return; }
+  el.innerHTML = ids.map(id => {
+    const item = DB.items.find(i=>i.id===id);
+    if (!item) return '';
+    const diff = cntCounts[id] - item.qty;
+    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;margin-bottom:6px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(item.name)}</div>
+        <div style="font-family:var(--font-mono);font-size:10px;color:${diff===0?'var(--green)':'var(--accent)'}">Expected ${item.qty} · Counted ${cntCounts[id]}${diff!==0?' ('+(diff>0?'+':'')+diff+')':' ✓'}</div>
+      </div>
+      <div class="cart-qty-ctrl">
+        <button class="cart-qty-btn" onclick="cntAdjust('${id}',-1)">−</button>
+        <div class="cart-qty-num">${cntCounts[id]}</div>
+        <button class="cart-qty-btn" onclick="cntAdjust('${id}',1)">+</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function showCountReview() {
+  const review = document.getElementById('cntReview');
+  const active = DB.items.filter(i => !i.archived);
+  const rows = active.map(item => {
+    const counted = cntCounts[item.id] ?? null;
+    const diff = counted === null ? null : counted - item.qty;
+    return { item, counted, diff };
+  }).filter(r => r.counted !== null || r.item.qty > 0);
+  const discrepancies = rows.filter(r => r.diff !== null && r.diff !== 0);
+  const uncounted = rows.filter(r => r.counted === null && r.item.qty > 0);
+  review.innerHTML =
+    (discrepancies.length ? '<div style="font-family:var(--font-mono);font-size:10px;color:var(--red);letter-spacing:1px;margin-bottom:8px">DISCREPANCIES (' + discrepancies.length + ')</div>' +
+      discrepancies.map(r => `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(255,92,92,0.06);border:1px solid rgba(255,92,92,0.3);border-radius:6px;margin-bottom:6px">
+        <div style="font-size:13px;font-weight:600">${esc(r.item.name)}</div>
+        <div style="font-family:var(--font-mono);font-size:12px">Expected ${r.item.qty} → Counted ${r.counted} <span style="color:var(--red);font-weight:700">(${r.diff>0?'+':''}${r.diff})</span></div>
+      </div>`).join('') : '<div style="font-family:var(--font-mono);font-size:12px;color:var(--green);padding:10px 0">✓ All counted items match expected quantities</div>') +
+    (uncounted.length ? '<div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:1px;margin:12px 0 8px">NOT COUNTED — WILL NOT BE CHANGED (' + uncounted.length + ')</div>' +
+      uncounted.map(r => `<div style="display:flex;justify-content:space-between;padding:6px 12px;font-size:12px;color:var(--muted)"><span>${esc(r.item.name)}</span><span style="font-family:var(--font-mono)">expected ${r.item.qty}</span></div>`).join('') : '');
+  document.getElementById('countPhase1').style.display = 'none';
+  document.getElementById('countPhase2').style.display = 'block';
+  stopCntScanner();
+}
+function applyCountCorrections() {
+  const ids = Object.keys(cntCounts);
+  if (!ids.length) { toast('Nothing counted', 'error'); return; }
+  pushUndo('Inventory count corrections');
+  const items = DB.items;
+  let changed = 0;
+  ids.forEach(id => {
+    const idx = items.findIndex(i=>i.id===id);
+    if (idx !== -1 && items[idx].qty !== cntCounts[id]) {
+      const diff = cntCounts[id] - items[idx].qty;
+      items[idx].qty = cntCounts[id];
+      addLog(items[idx], 'adj', Math.abs(diff));
+      changed++;
+    }
+  });
+  DB.items = items;
+  closeCountModal();
+  renderTable(); renderStats();
+  toast(changed + ' items corrected to match physical count', 'success');
+}
+function toggleCntScanner() {
+  if (cntScannerInstance) { stopCntScanner(); return; }
+  document.getElementById('cntScannerWrap').style.display = 'block';
+  document.getElementById('cntScanBtn').textContent = '⏹';
+  cntScannerInstance = new Html5QrcodeScanner('cnt-qr-reader', { fps:10, qrbox:{width:280,height:100}, rememberLastUsedCamera:true, supportedScanTypes:[Html5QrcodeScanType.SCAN_TYPE_CAMERA] }, false);
+  let lastCode=null, lastTime=0;
+  cntScannerInstance.render(code => {
+    const now=Date.now();
+    if (code===lastCode && now-lastTime<1500) return;
+    lastCode=code; lastTime=now;
+    const item = DB.items.find(i => i.barcode === code && !i.archived);
+    if (!item) { toast('Not found: ' + code, 'error'); return; }
+    cntAdd(item.id);
+    toast('Counted: ' + item.name + ' (' + cntCounts[item.id] + ')', 'success');
+  }, ()=>{});
+}
+function stopCntScanner() {
+  if (cntScannerInstance) { try{cntScannerInstance.clear();}catch{} cntScannerInstance=null; }
+  const w = document.getElementById('cntScannerWrap'); if (w) w.style.display='none';
+  const b = document.getElementById('cntScanBtn'); if (b) b.textContent='📷';
+}
+
+// ─── REORDER LIST ─────────────────────────────────────────────────────────────
+function getReorderItems() {
+  return DB.items.filter(i => !i.archived && i.qty <= (i.lowStock||2));
+}
+function openReorderModal() {
+  const items = getReorderItems();
+  const el = document.getElementById('reorderList');
+  el.innerHTML = items.length ? items.map(i => {
+    const suggest = Math.max((i.lowStock||2) * 3 - i.qty, 1);
+    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;margin-bottom:6px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600">${esc(i.name)}</div>
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted)">${i.barcode?'UPC: '+i.barcode+' · ':''}On hand: ${i.qty} · Alert at: ${i.lowStock||2}</div>
+      </div>
+      <div style="font-family:var(--font-mono);font-size:11px;color:var(--accent);white-space:nowrap">order ~${suggest}</div>
+    </div>`;
+  }).join('') : '<div style="text-align:center;padding:30px;color:var(--green);font-family:var(--font-mono);font-size:12px">✓ Everything is above its low-stock level</div>';
+  showModal('reorderModal');
+}
+function copyReorderList() {
+  const items = getReorderItems();
+  const text = 'REORDER LIST — ' + new Date().toLocaleDateString() + '\n\n' +
+    items.map(i => `${i.name}${i.barcode?' (UPC '+i.barcode+')':''} — on hand: ${i.qty}, suggest: ${Math.max((i.lowStock||2)*3-i.qty,1)}`).join('\n');
+  navigator.clipboard.writeText(text).then(()=>toast('Copied to clipboard','success')).catch(()=>toast('Copy failed','error'));
+}
+function exportReorderCSV() {
+  const items = getReorderItems();
+  const rows = [['Name','Barcode','On Hand','Low Stock Alert','Suggested Order','Last Cost']];
+  items.forEach(i => rows.push([i.name, i.barcode||'', i.qty, i.lowStock||2, Math.max((i.lowStock||2)*3-i.qty,1), i.cost||'']));
+  const csv = rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const a = document.createElement('a'); a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='reorder-list-'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
+  toast('Reorder CSV exported','success');
+}
+
 // ─── MODAL HELPERS ────────────────────────────────────────────────────────────
-const MODAL_IDS = ['itemModal','adjModal','driveModal','cartModal','templatesModal','templateBuildModal','saleModal','pdfModal'];
+const MODAL_IDS = ['itemModal','adjModal','driveModal','cartModal','templatesModal','templateBuildModal','saleModal','pdfModal','receiveModal','countModal','reorderModal'];
 
 function showModal(id) {
   MODAL_IDS.forEach(mid => {
@@ -2785,6 +3306,7 @@ document.addEventListener('click', (e) => {
 });
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
+document.getElementById('versionTag').textContent = 'v' + APP_VERSION;
 ['scan','log','sales'].forEach(id => {
   const el = document.getElementById(id + 'View');
   if (el) el.style.cssText = 'display:none !important';
