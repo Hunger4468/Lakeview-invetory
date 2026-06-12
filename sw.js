@@ -1,4 +1,4 @@
-const CACHE = 'lakeview-v4';
+const CACHE = 'lakeview-v5';
 
 // Only cache third-party assets, never the HTML itself
 const PRECACHE = [
