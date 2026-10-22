@@ -393,7 +393,11 @@
   }
   .tab-btn .tab-ico { font-size: 21px; line-height: 1; }
   .tab-btn .tab-lbl { font-size: 10px; letter-spacing: 0.5px; }
+  #bottomTabs .tab-btn,
+  #bottomTabs .tab-btn.active,
+  #bottomTabs .tab-btn:hover { background: none !important; border: none !important; font-weight: 400 !important; }
   .tab-btn.active { color: var(--accent); }
+  #bottomTabs .tab-btn.active { color: var(--accent) !important; }
   .tab-btn.active::before {
     content: ''; position: absolute; top: 0; left: 25%; right: 25%; height: 2px;
     background: var(--accent); border-radius: 0 0 2px 2px;
@@ -1092,7 +1096,7 @@
 
 <script>
 // ─── GLOBAL ERROR HANDLER ─────────────────────────────────────────────────────
-const APP_VERSION = '3.0.0';
+const APP_VERSION = '3.0.1';
 console.log('Lakeview Inventory v' + APP_VERSION);
 
 window.onerror = function(msg, src, line, col, err) {
