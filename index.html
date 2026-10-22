@@ -365,26 +365,149 @@
   #installBanner .text strong { display: block; font-size: 14px; color: var(--accent); }
   #installBanner .text small { font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
   #installBanner .actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+  /* ─── v3 NATIVE SHELL ─── */
+  body { padding-bottom: 64px; }
+  header {
+    height: 50px; padding: 0 14px;
+  }
+  .logo { font-size: 17px; letter-spacing: 2px; }
+  .v3-menu-btn {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    width: 36px; height: 36px; border-radius: 8px; font-size: 20px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+  }
+  .v3-menu-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Bottom tab bar */
+  #bottomTabs {
+    position: fixed; bottom: 0; left: 0; right: 0; height: 60px;
+    background: var(--surface); border-top: 1px solid var(--border);
+    display: flex; z-index: 150; box-shadow: 0 -4px 20px rgba(0,0,0,0.3);
+  }
+  .tab-btn {
+    flex: 1; background: none; border: none; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; color: var(--muted); font-family: var(--font-body); padding: 6px 0;
+    transition: color 0.15s; position: relative;
+  }
+  .tab-btn .tab-ico { font-size: 21px; line-height: 1; }
+  .tab-btn .tab-lbl { font-size: 10px; letter-spacing: 0.5px; }
+  .tab-btn.active { color: var(--accent); }
+  .tab-btn.active::before {
+    content: ''; position: absolute; top: 0; left: 25%; right: 25%; height: 2px;
+    background: var(--accent); border-radius: 0 0 2px 2px;
+  }
+
+  /* Floating add button */
+  #fabAdd {
+    position: fixed; right: 18px; bottom: 76px; width: 54px; height: 54px;
+    border-radius: 50%; background: var(--accent); color: #1a1f2e;
+    border: none; font-size: 30px; cursor: pointer; z-index: 160;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4); transition: transform 0.12s, background 0.15s;
+  }
+  #fabAdd:hover { background: var(--accent2); }
+  #fabAdd:active { transform: scale(0.92); }
+
+  /* Slide-up ⋯ menu */
+  #moreSheet {
+    position: fixed; inset: 0; z-index: 400; display: none;
+    background: rgba(0,0,0,0.6);
+  }
+  #moreSheet.open { display: block; }
+  #moreSheetPanel {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: var(--surface); border-radius: 16px 16px 0 0;
+    border-top: 2px solid var(--accent); padding: 8px 0 24px;
+    max-height: 80vh; overflow-y: auto;
+    animation: sheetUp 0.22s ease;
+  }
+  @keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .sheet-grabber { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 8px auto 14px; }
+  .sheet-item {
+    display: flex; align-items: center; gap: 14px; padding: 14px 22px;
+    color: var(--text); font-size: 15px; cursor: pointer; transition: background 0.12s;
+  }
+  .sheet-item:hover { background: var(--surface2); }
+  .sheet-item .si-ico { font-size: 20px; width: 24px; text-align: center; }
+  .sheet-item .si-sub { font-size: 11px; color: var(--muted); font-family: var(--font-mono); margin-top: 1px; }
+  .sheet-divider { height: 1px; background: var(--border); margin: 8px 22px; }
+
+  /* Category filter chips */
+  .cat-chips { display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 10px; -webkit-overflow-scrolling: touch; }
+  .cat-chips::-webkit-scrollbar { display: none; }
+  .cat-chip {
+    background: var(--surface2); color: var(--muted); font-size: 12px;
+    padding: 6px 14px; border-radius: 20px; white-space: nowrap; cursor: pointer;
+    border: 1px solid var(--border); transition: all 0.12s; flex-shrink: 0;
+  }
+  .cat-chip.active { background: var(--accent); color: #1a1f2e; font-weight: 600; border-color: var(--accent); }
+
+  /* Card-style inventory rows */
+  .inv-row {
+    display: flex; align-items: center; gap: 12px; padding: 13px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .inv-row:active { background: var(--surface2); }
+  .inv-main { flex: 1; min-width: 0; }
+  .inv-name { font-size: 14px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .inv-sub { font-size: 11px; color: var(--muted); font-family: var(--font-mono); margin-top: 2px; }
+  .inv-qty-wrap { text-align: right; flex-shrink: 0; }
+  .inv-qty { font-family: var(--font-display); font-size: 20px; line-height: 1; }
+  .inv-qty.ok { color: var(--green); }
+  .inv-qty.low { color: var(--accent); }
+  .inv-qty.out { color: var(--red); }
+  .inv-qty-lbl { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
+  .inv-row-actions { display: flex; gap: 4px; margin-left: 4px; }
+
+  /* Summary tab */
+  .sum-section-title { font-family: var(--font-display); font-size: 15px; letter-spacing: 2px; color: var(--accent); margin: 20px 2px 10px; }
+  .sum-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .sum-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+  .sum-card .sc-label { font-family: var(--font-mono); font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .sum-card .sc-value { font-family: var(--font-display); font-size: 30px; line-height: 1; color: var(--accent); }
+  .sum-card .sc-value.green { color: var(--green); }
+  .sum-card .sc-value.red { color: var(--red); }
+  .sum-card .sc-value.blue { color: var(--blue); }
+  .sum-low-row { display: flex; align-items: center; justify-content: space-between; padding: 11px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 7px; }
+  .sum-low-row .slr-name { font-size: 13px; font-weight: 600; }
+  .sum-low-row .slr-qty { font-family: var(--font-mono); font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 4px; background: rgba(255,92,92,0.15); color: var(--red); border: 1px solid rgba(255,92,92,0.3); }
 </style>
 </head>
 <body>
 
 <header>
-  <div class="logo">LAKEVIEW <span>FIREARMS</span> <small id="versionTag" style="font-family:var(--font-mono);font-size:9px;color:var(--muted);letter-spacing:1px;vertical-align:super"></small></div>
-  <nav>
-    <button class="active" onclick="switchView('dashboard', this)">Inventory</button>
-    <button onclick="switchView('scan', this)">📷 Scan</button>
-    <button onclick="switchView('log', this)">Log</button>
-    <button onclick="switchView('sales', this)">$ Sales</button>
-  </nav>
+  <div class="logo">LAKEVIEW <small id="versionTag" style="font-family:var(--font-mono);font-size:9px;color:var(--muted);letter-spacing:1px;vertical-align:super"></small></div>
   <div class="header-right">
     <div class="sync-pill" id="undoBtn" onclick="undoLast()" style="display:none" title="Undo last action">↩ <span>Undo</span></div>
     <div class="sync-pill" id="syncPill" onclick="openDriveModal()" title="Google Drive Sync">
       <div class="dot"></div>
       <span id="syncLabel">Drive</span>
     </div>
+    <button class="v3-menu-btn" onclick="openMoreSheet()" title="More" aria-label="More actions">⋯</button>
   </div>
 </header>
+
+<!-- SUMMARY VIEW -->
+<div id="summaryView" class="view">
+  <div id="setupBannerSum" class="setup-banner" style="display:none;margin-top:16px">
+    <div class="icon">☁️</div>
+    <div class="text">
+      <strong>Connect Google Drive to sync across devices</strong>
+      <small>Tap ⋯ → Google Drive to set up.</small>
+    </div>
+  </div>
+  <div class="sum-section-title">INVENTORY</div>
+  <div class="sum-grid" id="sumInvGrid"></div>
+  <div class="sum-section-title">THIS MONTH</div>
+  <div class="sum-grid" id="sumSalesGrid"></div>
+  <div class="sum-section-title" style="display:flex;justify-content:space-between;align-items:center">
+    <span>RUNNING LOW</span>
+    <span onclick="openReorderModal()" style="font-family:var(--font-mono);font-size:10px;color:var(--blue);cursor:pointer;letter-spacing:1px">FULL LIST →</span>
+  </div>
+  <div id="sumLowList"></div>
+</div>
 
 <!-- DASHBOARD -->
 <div id="dashView" class="view active">
@@ -396,34 +519,14 @@
     </div>
     <button class="btn drive" onclick="openDriveModal()">Set Up Sync</button>
   </div>
-  <div class="stats-row" id="statsRow"></div>
-  <div class="toolbar">
+  <div id="archivedBadge" style="display:none;margin:12px 2px 0;font-family:var(--font-mono);font-size:11px;color:var(--red);letter-spacing:1px">🗄 VIEWING ARCHIVED — tap ⋯ to exit</div>
+  <div class="toolbar" style="margin-top:14px">
     <input class="search-box" id="searchBox" placeholder="🔍  Search name, barcode, category…" oninput="renderTable()">
-    <button class="btn" onclick="exportCSV()">⬇ CSV</button>
-    <button class="btn" onclick="document.getElementById('pdfFileInput').click()">📄 Import PDF</button>
-    <button class="btn" id="archiveToggleBtn" onclick="toggleArchivedView()">🗄 Archived</button>
-    <button class="btn" id="groupToggleBtn" onclick="toggleGroupView()">📂 Group</button>
-    <button class="btn" onclick="openReceiveModal()">📥 Receive</button>
-    <button class="btn" onclick="openCountModal()">🔢 Count</button>
-    <button class="btn" onclick="openReorderModal()">🔄 Reorder List</button>
-    <input type="file" id="pdfFileInput" accept=".pdf" style="display:none" onchange="handlePdfUpload(event)">
-    <button class="btn drive" onclick="manualSync()" id="syncNowBtn" style="display:none">↻ Sync</button>
-    <button class="btn primary" onclick="openAddModal()">+ Add Item</button>
   </div>
-  <table>
-    <thead>
-      <tr>
-        <th onclick="sortBy('name')">Item ↕</th>
-        <th onclick="sortBy('category')" class="hide-mobile">Category ↕</th>
-        <th onclick="sortBy('barcode')" class="hide-mobile">Barcode ↕</th>
-        <th onclick="sortBy('qty')">Qty ↕</th>
-        <th onclick="sortBy('cost')" class="hide-mobile">Cost ↕</th>
-        <th onclick="sortBy('price')" class="hide-mobile">Price ↕</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody id="tableBody"></tbody>
-  </table>
+  <div class="cat-chips" id="catChips"></div>
+  <input type="file" id="pdfFileInput" accept=".pdf" style="display:none" onchange="handlePdfUpload(event)">
+  <input type="file" id="csvFileInput" accept=".csv" style="display:none" onchange="handleCsvUpload(event)">
+  <div id="invList" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-top:4px"></div>
 </div>
 
 <!-- SCAN VIEW -->
@@ -954,11 +1057,42 @@
   </div>
 </div>
 
+<!-- BOTTOM TAB BAR -->
+<nav id="bottomTabs">
+  <button class="tab-btn" data-tab="summary" onclick="switchView('summary', this)"><span class="tab-ico">▦</span><span class="tab-lbl">Summary</span></button>
+  <button class="tab-btn active" data-tab="dashboard" onclick="switchView('dashboard', this)"><span class="tab-ico">▣</span><span class="tab-lbl">Inventory</span></button>
+  <button class="tab-btn" data-tab="scan" onclick="switchView('scan', this)"><span class="tab-ico">⬚</span><span class="tab-lbl">Scan</span></button>
+  <button class="tab-btn" data-tab="sales" onclick="switchView('sales', this)"><span class="tab-ico">$</span><span class="tab-lbl">Sales</span></button>
+  <button class="tab-btn" data-tab="log" onclick="switchView('log', this)"><span class="tab-ico">≣</span><span class="tab-lbl">Log</span></button>
+</nav>
+
+<!-- FLOATING ADD BUTTON -->
+<button id="fabAdd" onclick="openAddModal()" aria-label="Add item" title="Add item">+</button>
+
+<!-- MORE SHEET -->
+<div id="moreSheet" onclick="if(event.target===this)closeMoreSheet()">
+  <div id="moreSheetPanel">
+    <div class="sheet-grabber"></div>
+    <div class="sheet-item" onclick="closeMoreSheet();document.getElementById('pdfFileInput').click()"><span class="si-ico">📄</span><div>Import PDF invoice<div class="si-sub">Crow, Primary Arms, Davidson's, auction</div></div></div>
+    <div class="sheet-item" onclick="closeMoreSheet();document.getElementById('csvFileInput').click()"><span class="si-ico">📑</span><div>Import CSV<div class="si-sub">Bulk add from a spreadsheet</div></div></div>
+    <div class="sheet-divider"></div>
+    <div class="sheet-item" onclick="closeMoreSheet();openReceiveModal()"><span class="si-ico">📥</span><div>Receive shipment<div class="si-sub">Scan items into stock</div></div></div>
+    <div class="sheet-item" onclick="closeMoreSheet();openCountModal()"><span class="si-ico">🔢</span><div>Inventory count<div class="si-sub">Physical count + discrepancies</div></div></div>
+    <div class="sheet-item" onclick="closeMoreSheet();openReorderModal()"><span class="si-ico">🔄</span><div>Reorder list<div class="si-sub">Items running low</div></div></div>
+    <div class="sheet-divider"></div>
+    <div class="sheet-item" onclick="closeMoreSheet();toggleGroupView()"><span class="si-ico">📂</span><div>Group by category<div class="si-sub" id="sheetGroupSub">Off</div></div></div>
+    <div class="sheet-item" onclick="closeMoreSheet();toggleArchivedView()"><span class="si-ico">🗄</span><div><span id="sheetArchiveLabel">View archived</span><div class="si-sub">Do-not-reorder items</div></div></div>
+    <div class="sheet-divider"></div>
+    <div class="sheet-item" onclick="closeMoreSheet();exportCSV()"><span class="si-ico">⬇</span><div>Export inventory CSV<div class="si-sub">Download a backup</div></div></div>
+    <div class="sheet-item" onclick="closeMoreSheet();openDriveModal()"><span class="si-ico">☁️</span><div>Google Drive sync<div class="si-sub">Set up or manage</div></div></div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
 // ─── GLOBAL ERROR HANDLER ─────────────────────────────────────────────────────
-const APP_VERSION = '2.1.0';
+const APP_VERSION = '3.0.0';
 console.log('Lakeview Inventory v' + APP_VERSION);
 
 window.onerror = function(msg, src, line, col, err) {
@@ -1007,34 +1141,32 @@ let adjItemId=null, scanItemId=null, adjType='in', adjCount=1, sortCol='name', s
 let html5QrScanner = null;
 
 // ─── VIEWS ────────────────────────────────────────────────────────────────────
-const VIEW_IDS = ['dash', 'scan', 'log', 'sales'];
+const VIEW_IDS = ['summary', 'dash', 'scan', 'log', 'sales'];
 
 function switchView(v, btn) {
-  // Map 'dashboard' -> 'dash' for the view ID
   const vid = v === 'dashboard' ? 'dash' : v;
 
-  // Explicitly hide every known view by ID
   VIEW_IDS.forEach(id => {
     const el = document.getElementById(id + 'View');
-    if (el) {
-      el.classList.remove('active');
-      el.style.cssText = 'display:none !important';
-    }
+    if (el) { el.classList.remove('active'); el.style.cssText = 'display:none !important'; }
   });
 
-  // Show target view
   const target = document.getElementById(vid + 'View');
   if (target) {
     target.classList.add('active');
     target.style.cssText = 'display:block !important; visibility:visible !important; opacity:1 !important';
   }
 
-  // Scroll to top
   window.scrollTo(0, 0);
 
-  // Update nav
-  document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
-  if (btn) btn.classList.add('active');
+  // Bottom-tab active state (data-tab matches the view keyword)
+  document.querySelectorAll('#bottomTabs .tab-btn').forEach(el => {
+    el.classList.toggle('active', el.getAttribute('data-tab') === v);
+  });
+
+  // FAB only on the Inventory tab
+  const fab = document.getElementById('fabAdd');
+  if (fab) fab.style.display = (v === 'dashboard') ? 'flex' : 'none';
 
   // Stop scanners
   if (v !== 'scan') stopScanner();
@@ -1042,22 +1174,65 @@ function switchView(v, btn) {
     if (typeof stopSaleScanner === 'function') stopSaleScanner();
     if (typeof stopCartScanner === 'function') stopCartScanner();
   }
+  if (typeof stopRcvScanner === 'function') stopRcvScanner();
+  if (typeof stopCntScanner === 'function') stopCntScanner();
 
-  // Render immediately
   if (v === 'dashboard') { renderStats(); renderTable(); }
+  else if (v === 'summary') renderSummary();
   else if (v === 'log') renderLog();
   else if (v === 'sales') setSalesRange('month');
   else if (v === 'scan') initScanner();
 
-  // Second render pass after browser paint as safety net
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
-      if (target) {
-        target.style.cssText = 'display:block !important; visibility:visible !important; opacity:1 !important';
-      }
+      if (target) target.style.cssText = 'display:block !important; visibility:visible !important; opacity:1 !important';
       if (v === 'dashboard') { renderStats(); renderTable(); }
+      else if (v === 'summary') renderSummary();
     });
   });
+}
+
+// ─── MORE SHEET ───────────────────────────────────────────────────────────────
+function openMoreSheet() {
+  document.getElementById('sheetArchiveLabel').textContent = showArchived ? 'Exit archived view' : 'View archived';
+  document.getElementById('sheetGroupSub').textContent = groupByCategory ? 'On' : 'Off';
+  document.getElementById('moreSheet').classList.add('open');
+}
+function closeMoreSheet() { document.getElementById('moreSheet').classList.remove('open'); }
+
+// ─── SUMMARY TAB ──────────────────────────────────────────────────────────────
+function renderSummary() {
+  const active = DB.items.filter(i => !i.archived);
+  const low = active.filter(i => i.qty > 0 && i.qty <= (i.lowStock||2));
+  const out = active.filter(i => i.qty === 0);
+  const val = active.reduce((s,i) => s + i.qty * (i.cost||0), 0);
+  document.getElementById('sumInvGrid').innerHTML = `
+    <div class="sum-card"><div class="sc-label">Total SKUs</div><div class="sc-value">${active.length}</div></div>
+    <div class="sum-card"><div class="sc-label">Inventory Value</div><div class="sc-value green">$${val.toFixed(0)}</div></div>
+    <div class="sum-card"><div class="sc-label">Low Stock</div><div class="sc-value ${low.length?'red':''}">${low.length}</div></div>
+    <div class="sum-card"><div class="sc-label">Out of Stock</div><div class="sc-value ${out.length?'red':''}">${out.length}</div></div>`;
+
+  // This month's sales
+  const now = new Date();
+  const monthKey = now.toISOString().slice(0,7);
+  const sales = (typeof SDB !== 'undefined' ? SDB.sales : []).filter(s => (s.date||'').startsWith(monthKey));
+  const rev = sales.reduce((s,x) => s + (x.revenue||0), 0);
+  const profit = sales.reduce((s,x) => s + (x.profit||0), 0);
+  document.getElementById('sumSalesGrid').innerHTML = `
+    <div class="sum-card"><div class="sc-label">Revenue</div><div class="sc-value green">$${rev.toFixed(0)}</div></div>
+    <div class="sum-card"><div class="sc-label">Profit</div><div class="sc-value ${profit>=0?'green':'red'}">$${profit.toFixed(0)}</div></div>
+    <div class="sum-card"><div class="sc-label">Transactions</div><div class="sc-value blue">${sales.length}</div></div>
+    <div class="sum-card"><div class="sc-label">Units Sold</div><div class="sc-value">${sales.reduce((s,x)=>s+(x.qty||0),0)}</div></div>`;
+
+  // Running low preview (up to 6)
+  const lowList = active.filter(i => i.qty <= (i.lowStock||2)).sort((a,b) => a.qty - b.qty).slice(0,6);
+  document.getElementById('sumLowList').innerHTML = lowList.length ? lowList.map(i =>
+    `<div class="sum-low-row"><div class="slr-name">${esc(i.name)}</div><div class="slr-qty">${i.qty} left</div></div>`
+  ).join('') : '<div style="color:var(--green);font-family:var(--font-mono);font-size:12px;padding:8px 2px">✓ Everything is well stocked</div>';
+
+  // Drive setup banner
+  const sb = document.getElementById('setupBannerSum');
+  if (sb) sb.style.display = DB.clientId ? 'none' : 'flex';
 }
 
 // ─── SCANNER (html5-qrcode) ───────────────────────────────────────────────────
@@ -1137,12 +1312,12 @@ function renderStats() {
   const low = items.filter(i => i.qty>0 && i.qty<=(i.lowStock||2)).length;
   const out = items.filter(i => i.qty===0).length;
   const val = items.reduce((s,i) => s+(i.qty*(i.cost||0)), 0);
-  document.getElementById('statsRow').innerHTML = `
+  const sr = document.getElementById('statsRow');
+  if (sr) sr.innerHTML = `
     <div class="stat-card"><div class="label">Total SKUs</div><div class="value">${items.length}</div></div>
     <div class="stat-card"><div class="label">Low Stock</div><div class="value ${low?'red':''}">${low}</div></div>
     <div class="stat-card"><div class="label">Out of Stock</div><div class="value ${out?'red':''}">${out}</div></div>
-    <div class="stat-card"><div class="label">Inventory Value</div><div class="value green">$${val.toFixed(0)}</div></div>
-    ${archived?`<div class="stat-card" style="cursor:pointer" onclick="if(!showArchived)toggleArchivedView()"><div class="label">Archived</div><div class="value" style="color:var(--muted)">${archived}</div></div>`:''}`;
+    <div class="stat-card"><div class="label">Inventory Value</div><div class="value green">$${val.toFixed(0)}</div></div>`;
 }
 
 // ─── TABLE ────────────────────────────────────────────────────────────────────
@@ -1152,12 +1327,14 @@ function sortBy(col) { if(sortCol===col) sortDir*=-1; else{sortCol=col;sortDir=1
 
 function toggleArchivedView() {
   showArchived = !showArchived;
-  const btn = document.getElementById('archiveToggleBtn');
-  if (btn) {
-    btn.textContent = showArchived ? '📦 Active Items' : '🗄 Archived';
-    btn.classList.toggle('primary', showArchived);
-  }
-  renderTable();
+  activeChipCat = 'all';
+  document.getElementById('searchBox').value = '';
+  const badge = document.getElementById('archivedBadge');
+  if (badge) badge.style.display = showArchived ? 'block' : 'none';
+  // Make sure we're on the inventory tab so the change is visible
+  const invTab = document.querySelector('#bottomTabs .tab-btn[data-tab="dashboard"]');
+  if (invTab && !document.getElementById('dashView').classList.contains('active')) switchView('dashboard', invTab);
+  else renderTable();
 }
 
 let groupByCategory = false;
@@ -1165,9 +1342,9 @@ let collapsedCats = new Set();
 
 function toggleGroupView() {
   groupByCategory = !groupByCategory;
-  const btn = document.getElementById('groupToggleBtn');
-  if (btn) btn.classList.toggle('primary', groupByCategory);
-  renderTable();
+  const invTab = document.querySelector('#bottomTabs .tab-btn[data-tab="dashboard"]');
+  if (invTab && !document.getElementById('dashView').classList.contains('active')) switchView('dashboard', invTab);
+  else renderTable();
 }
 
 function toggleCatCollapse(cat) {
@@ -1190,22 +1367,18 @@ function renderTable() {
     if(typeof bv==='string') bv=bv.toLowerCase();
     return av<bv?-sortDir:av>bv?sortDir:0;
   });
-  const body = document.getElementById('tableBody');
+  const body = document.getElementById('invList');
   if (!items.length) {
     body.innerHTML = showArchived
-      ? '<tr><td colspan="7"><div class="empty"><div class="icon">🗄</div>No archived items</div></td></tr>'
-      : '<tr><td colspan="7"><div class="empty"><div class="icon">📦</div>No items found</div></td></tr>';
+      ? '<div class="empty"><div class="icon">🗄</div>No archived items</div>'
+      : '<div class="empty"><div class="icon">📦</div>No items found</div>';
+    renderCatChips(); updateCatList(); renderStats();
     return;
   }
 
   if (groupByCategory) {
-    // Group items by category
     const groups = {};
-    items.forEach(i => {
-      const cat = i.category || 'Uncategorized';
-      if (!groups[cat]) groups[cat] = [];
-      groups[cat].push(i);
-    });
+    items.forEach(i => { const cat = i.category || 'Uncategorized'; (groups[cat] = groups[cat] || []).push(i); });
     const sortedCats = Object.keys(groups).sort((a,b) => a.localeCompare(b));
     body.innerHTML = sortedCats.map(cat => {
       const rows = groups[cat];
@@ -1213,45 +1386,59 @@ function renderTable() {
       const totalVal = rows.reduce((s,i) => s + i.qty * (i.cost||0), 0);
       const lowCount = rows.filter(i => i.qty <= (i.lowStock||2)).length;
       const collapsed = collapsedCats.has(cat);
-      const header = `<tr style="cursor:pointer;background:var(--surface2)" onclick="toggleCatCollapse('${esc(cat).replace(/'/g,"\\'")}')">
-        <td colspan="7" style="padding:10px 16px;border-top:2px solid var(--accent)">
-          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-            <span style="font-family:var(--font-mono);font-size:10px;color:var(--muted)">${collapsed?'▶':'▼'}</span>
-            <strong style="font-family:var(--font-display);font-size:17px;letter-spacing:1.5px;color:var(--accent)">${esc(cat.toUpperCase())}</strong>
-            <span style="font-family:var(--font-mono);font-size:11px;color:var(--muted)">${rows.length} item${rows.length!==1?'s':''} · ${totalQty} units · $${totalVal.toFixed(0)} value${lowCount?` · <span style="color:var(--red)">${lowCount} low</span>`:''}</span>
-          </div>
-        </td>
-      </tr>`;
+      const header = `<div onclick="toggleCatCollapse('${esc(cat).replace(/'/g,"\\'")}')" style="cursor:pointer;background:var(--surface2);padding:10px 14px;border-top:2px solid var(--accent);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--muted)">${collapsed?'▶':'▼'}</span>
+        <strong style="font-family:var(--font-display);font-size:15px;letter-spacing:1.5px;color:var(--accent)">${esc(cat.toUpperCase())}</strong>
+        <span style="font-family:var(--font-mono);font-size:10px;color:var(--muted)">${rows.length} · ${totalQty}u · $${totalVal.toFixed(0)}${lowCount?` · <span style="color:var(--red)">${lowCount} low</span>`:''}</span>
+      </div>`;
       return header + (collapsed ? '' : rows.map(item => itemRowHTML(item)).join(''));
     }).join('');
-    updateCatList(); renderStats();
+    renderCatChips(); updateCatList(); renderStats();
     return;
   }
 
   body.innerHTML = items.map(item => itemRowHTML(item)).join('');
-  updateCatList(); renderStats();
+  renderCatChips(); updateCatList(); renderStats();
+}
+
+// Active category chip filter
+let activeChipCat = 'all';
+function renderCatChips() {
+  const el = document.getElementById('catChips');
+  if (!el) return;
+  const cats = [...new Set(DB.items.filter(i => !!i.archived === showArchived && i.category).map(i => i.category))].sort();
+  const chip = (key, label) => `<div class="cat-chip ${activeChipCat===key?'active':''}" onclick="setChipCat('${esc(key).replace(/'/g,"\\'")}')">${esc(label)}</div>`;
+  el.innerHTML = chip('all','All') + cats.map(ca => chip(ca, ca)).join('');
+}
+function setChipCat(cat) {
+  activeChipCat = cat;
+  document.getElementById('searchBox').value = (cat === 'all') ? '' : cat;
+  renderTable();
 }
 
 function itemRowHTML(item) {
-  const low=item.lowStock||2;
-  const qc=item.qty===0?'qty-low':item.qty<=low?'qty-warn':'qty-ok';
-  return `<tr ${item.archived?'style="opacity:0.65"':''}>
-    <td><strong>${esc(item.name)}</strong>${item.archived?' <span style="font-family:var(--font-mono);font-size:9px;background:rgba(255,92,92,0.15);color:var(--red);border:1px solid rgba(255,92,92,0.3);padding:2px 6px;border-radius:3px;letter-spacing:1px">DO NOT REORDER</span>':''}${item.notes?`<br><span style="font-size:11px;color:var(--muted)">${esc(item.notes)}</span>`:''}</td>
-    <td class="hide-mobile">${esc(item.category||'—')}</td>
-    <td class="barcode-cell hide-mobile">${esc(item.barcode||'—')}</td>
-    <td><span class="qty-badge ${qc}">${item.qty}</span></td>
-    <td class="hide-mobile">${item.cost?'$'+Number(item.cost).toFixed(2):'—'}</td>
-    <td class="hide-mobile">${item.price?'$'+Number(item.price).toFixed(2):'—'}</td>
-    <td><div class="action-btns">
+  const low = item.lowStock || 2;
+  const qc = item.qty === 0 ? 'out' : item.qty <= low ? 'low' : 'ok';
+  const qlabel = item.qty === 0 ? 'out' : item.qty <= low ? 'low stock' : 'in stock';
+  const sub = [item.category, item.barcode ? 'UPC ' + item.barcode : null, item.notes ? item.notes.slice(0,28) : null].filter(Boolean).join(' · ');
+  return `<div class="inv-row" ${item.archived?'style="opacity:0.6"':''}>
+    <div class="inv-main">
+      <div class="inv-name">${esc(item.name)}${item.archived?' <span style="font-family:var(--font-mono);font-size:8px;background:rgba(255,92,92,0.15);color:var(--red);border:1px solid rgba(255,92,92,0.3);padding:1px 5px;border-radius:3px;letter-spacing:1px;vertical-align:middle">NO REORDER</span>':''}</div>
+      <div class="inv-sub">${esc(sub || '—')}</div>
+    </div>
+    <div class="inv-qty-wrap">
+      <div class="inv-qty ${qc}">${item.qty}</div>
+      <div class="inv-qty-lbl">${qlabel}</div>
+    </div>
+    <div class="inv-row-actions">
       ${item.archived
-        ? `<button class="icon-btn" title="Restore to active inventory" onclick="unarchiveItem('${item.id}')">↩</button>
-           <button class="icon-btn del" title="Delete permanently" onclick="deleteItem('${item.id}')">✕</button>`
+        ? `<button class="icon-btn" title="Restore" onclick="unarchiveItem('${item.id}')">↩</button>
+           <button class="icon-btn del" title="Delete" onclick="deleteItem('${item.id}')">✕</button>`
         : `<button class="icon-btn" title="Adjust qty" onclick="openAdjModal('${item.id}')">±</button>
            <button class="icon-btn" title="Edit" onclick="openEditModal('${item.id}')">✎</button>
-           <button class="icon-btn" title="Archive — do not reorder" onclick="archiveItem('${item.id}')">🗄</button>
-           <button class="icon-btn del" title="Delete" onclick="deleteItem('${item.id}')">✕</button>`}
-    </div></td>
-  </tr>`;
+           <button class="icon-btn" title="Archive" onclick="archiveItem('${item.id}')">🗄</button>`}
+    </div>
+  </div>`;
 }
 
 function archiveItem(id) {
@@ -1416,8 +1603,8 @@ async function handleTokenResponse(resp) {
     updateConnectedUI();
     document.getElementById('driveSetupPanel').style.display='none';
     document.getElementById('driveConnectedPanel').style.display='block';
-    document.getElementById('syncNowBtn').style.display='';
-    document.getElementById('setupBanner').style.display='none';
+    {const _s=document.getElementById('syncNowBtn'); if(_s)_s.style.display='';}
+    {const _sb=document.getElementById('setupBannerSum'); if(_sb)_sb.style.display='none';}
     await syncFromDrive();
   } catch(e){console.error(e);updateSyncUI('error');}
 }
@@ -1546,8 +1733,8 @@ function disconnectDrive() {
   localStorage.removeItem('lf_drive_user'); updateSyncUI('disconnected');
   document.getElementById('driveConnectedPanel').style.display='none';
   document.getElementById('driveSetupPanel').style.display='block';
-  document.getElementById('syncNowBtn').style.display='none';
-  document.getElementById('setupBanner').style.display='flex';
+  {const _s=document.getElementById('syncNowBtn'); if(_s)_s.style.display='none';}
+  {const _sb=document.getElementById('setupBannerSum'); if(_sb)_sb.style.display='flex';}
   hideModal('driveModal');
   toast('Disconnected from Google Drive');
 }
@@ -1557,6 +1744,95 @@ function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').
 function toast(msg,type=''){const el=document.getElementById('toast');el.textContent=msg;el.className='show '+type;clearTimeout(el._t);el._t=setTimeout(()=>el.className='',2500);}
 function updateCatList(){const cats=[...new Set(DB.items.map(i=>i.category).filter(Boolean))];document.getElementById('catList').innerHTML=cats.map(c=>`<option value="${esc(c)}">`).join('');}
 
+
+// ─── CSV IMPORT ───────────────────────────────────────────────────────────────
+function handleCsvUpload(event) {
+  const file = event.target.files[0];
+  event.target.value = '';
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const rows = parseCSV(e.target.result);
+      if (rows.length < 2) { toast('CSV appears empty', 'error'); return; }
+      const header = rows[0].map(h => h.trim().toLowerCase());
+      const col = (names) => header.findIndex(h => names.some(n => h.includes(n)));
+      const iName = col(['name','description','item']);
+      const iBarcode = col(['barcode','upc','sku']);
+      const iCat = col(['category','type']);
+      const iQty = col(['qty','quantity','stock']);
+      const iLow = col(['low']);
+      const iCost = col(['cost']);
+      const iPrice = col(['price','retail','sell']);
+      const iNotes = col(['notes','note']);
+      if (iName === -1) { toast('CSV needs a Name/Description column', 'error'); return; }
+
+      pushUndo('CSV import');
+      const items = DB.items;
+      let added = 0, updated = 0, skipped = 0, archivedSkipped = 0;
+      for (let r = 1; r < rows.length; r++) {
+        const row = rows[r];
+        if (!row || !row[iName]) { continue; }
+        const name = row[iName].trim();
+        if (!name) { continue; }
+        const barcode = iBarcode !== -1 ? (row[iBarcode]||'').trim() : '';
+        const existingIdx = items.findIndex(it =>
+          (barcode && it.barcode === barcode) || it.name.toLowerCase() === name.toLowerCase()
+        );
+        if (existingIdx !== -1 && items[existingIdx].archived) { archivedSkipped++; continue; }
+        const qty = iQty !== -1 ? (parseInt(row[iQty])||0) : 0;
+        const cost = iCost !== -1 ? (parseFloat((row[iCost]||'').replace(/[^0-9.]/g,''))||0) : 0;
+        const price = iPrice !== -1 ? (parseFloat((row[iPrice]||'').replace(/[^0-9.]/g,''))||0) : 0;
+        if (existingIdx !== -1) {
+          if (qty) items[existingIdx].qty += qty;
+          if (cost) items[existingIdx].cost = cost;
+          updated++;
+        } else {
+          items.push({
+            id: 'item_' + Date.now() + '_' + Math.random().toString(36).slice(2),
+            name, barcode,
+            category: iCat !== -1 ? (row[iCat]||'').trim() : '',
+            qty,
+            lowStock: iLow !== -1 ? (parseInt(row[iLow])||2) : 2,
+            cost, price,
+            notes: iNotes !== -1 ? (row[iNotes]||'').trim() : '',
+            archived: false
+          });
+          added++;
+        }
+      }
+      DB.items = items;
+      renderTable(); renderStats();
+      toast(`Imported: ${added} new, ${updated} updated` + (archivedSkipped?`, ${archivedSkipped} archived skipped`:''), 'success');
+    } catch(err) {
+      console.error(err);
+      toast('CSV import failed: ' + err.message, 'error');
+    }
+  };
+  reader.readAsText(file);
+}
+
+// Simple RFC-4180-ish CSV parser (handles quoted fields, commas, newlines)
+function parseCSV(text) {
+  const rows = [];
+  let row = [], field = '', inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i], next = text[i+1];
+    if (inQuotes) {
+      if (ch === '"' && next === '"') { field += '"'; i++; }
+      else if (ch === '"') { inQuotes = false; }
+      else { field += ch; }
+    } else {
+      if (ch === '"') { inQuotes = true; }
+      else if (ch === ',') { row.push(field); field = ''; }
+      else if (ch === '\r') { /* skip */ }
+      else if (ch === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+      else { field += ch; }
+    }
+  }
+  if (field.length || row.length) { row.push(field); rows.push(row); }
+  return rows.filter(r => r.length && r.some(c => c.trim()));
+}
 
 // ─── PDF IMPORT (Multi-Wholesaler) ────────────────────────────────────────────
 let pdfParsed = [];
@@ -3020,6 +3296,8 @@ let rcvPending = {}; // itemId -> count
 let rcvScannerInstance = null;
 
 function openReceiveModal() {
+  stopScanner();
+  if (typeof stopCntScanner === 'function') stopCntScanner();
   rcvPending = {};
   document.getElementById('rcvSearch').value = '';
   document.getElementById('rcvDropdown').style.display = 'none';
@@ -3115,6 +3393,8 @@ let cntCounts = {}; // itemId -> counted qty
 let cntScannerInstance = null;
 
 function openCountModal() {
+  stopScanner();
+  if (typeof stopRcvScanner === 'function') stopRcvScanner();
   cntCounts = {};
   document.getElementById('cntSearch').value = '';
   document.getElementById('cntDropdown').style.display = 'none';
@@ -3307,24 +3587,18 @@ document.addEventListener('click', (e) => {
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 document.getElementById('versionTag').textContent = 'v' + APP_VERSION;
-['scan','log','sales'].forEach(id => {
+['summary','scan','log','sales'].forEach(id => {
   const el = document.getElementById(id + 'View');
   if (el) el.style.cssText = 'display:none !important';
 });
 const dashEl = document.getElementById('dashView');
 if (dashEl) dashEl.style.cssText = 'display:block !important';
 
-// Always render local data immediately — don't wait for Drive
-renderStats();
+// Render local data immediately — don't wait for Drive
 renderTable();
 
-// Then init Drive in background
-if (!DB.clientId) {
-  document.getElementById('setupBanner').style.display = 'flex';
-} else {
-  document.getElementById('syncNowBtn').style.display = '';
-  initDrive();
-}
+// Init Drive in background
+if (DB.clientId) initDrive();
 
 // ─── PWA ──────────────────────────────────────────────────────────────────────
 let deferredInstallPrompt = null;
